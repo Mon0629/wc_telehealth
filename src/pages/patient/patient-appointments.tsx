@@ -18,6 +18,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -32,6 +39,9 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
+import useAppointmentStore, {
+  getSlotsForDate,
+} from "@/store/appointmentStore"
 import useDoctorStore, {
   isDateOnDoctorAvailableDay,
   type DoctorListItem,
@@ -117,6 +127,17 @@ function isMonthWithinBookingWindow(month: Date, from: Date = new Date()) {
     viewed.getTime() === current.getTime() ||
     viewed.getTime() === next.getTime()
   )
+}
+
+function formatSlotLabel(time: string) {
+  const [hourPart, minutePart = "00"] = time.split(":")
+  const hour = Number(hourPart)
+  const minute = Number(minutePart)
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return time
+
+  const period = hour >= 12 ? "pm" : "am"
+  const hour12 = hour % 12 || 12
+  return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`
 }
 
 function AppointmentDoctorCard({
@@ -209,6 +230,8 @@ const PatientAppointments = () => {
     return d
   })
   const [concern, setConcern] = useState("")
+  const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [slotsDialogOpen, setSlotsDialogOpen] = useState(false)
   const [appointments, setAppointments] =
     useState<AppointmentRow[]>(MOCK_APPOINTMENTS)
   const [calendarCardHeight, setCalendarCardHeight] = useState<number>()
@@ -217,13 +240,33 @@ const PatientAppointments = () => {
   const { doctors, pagination, isLoading, error, fetchDoctors, clearError } =
     useDoctorStore()
 
+  const fetchWeekSlots = useAppointmentStore((state) => state.fetchWeekSlots)
+  const clearWeekSlots = useAppointmentStore((state) => state.clearWeekSlots)
+  const weekSlots = useAppointmentStore((state) => state.weekSlots)
+  const isLoadingSlots = useAppointmentStore((state) => state.isLoadingSlots)
+  const slotsError = useAppointmentStore((state) => state.slotsError)
+
   const todayStart = useMemo(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
     return d
   }, [])
 
-  const availableDaysOfWeek = selectedDoctor?.availableDaysOfWeek ?? []
+  const availableDaysOfWeek = useMemo(
+    () => selectedDoctor?.availableDaysOfWeek ?? [],
+    [selectedDoctor?.availableDaysOfWeek],
+  )
+
+  const selectedDoctorId = selectedDoctor?.id ?? null
+
+  const selectedDateKey = selectedDate
+    ? format(selectedDate, "yyyy-MM-dd")
+    : null
+
+  const availableSlots = useMemo(() => {
+    if (!selectedDateKey || !weekSlots) return []
+    return getSlotsForDate(weekSlots, selectedDateKey)
+  }, [weekSlots, selectedDateKey])
 
   const bookingWindowEnd = useMemo(() => getEndOfNextMonth(), [])
 
@@ -264,6 +307,37 @@ const PatientAppointments = () => {
       setSelectedDate(undefined)
     }
   }, [selectedDoctor, availableDaysOfWeek, selectedDate, todayStart])
+
+  useEffect(() => {
+    if (!selectedDoctorId || !selectedDateKey) {
+      clearWeekSlots()
+      return
+    }
+
+    const [year, month, day] = selectedDateKey.split("-").map(Number)
+    const dateForCheck = new Date(year, month - 1, day)
+
+    if (
+      !isDateWithinBookingWindow(dateForCheck, todayStart) ||
+      !isDateOnDoctorAvailableDay(dateForCheck, availableDaysOfWeek)
+    ) {
+      return
+    }
+
+    fetchWeekSlots(selectedDoctorId, selectedDateKey).catch(() => undefined)
+  }, [selectedDoctorId, selectedDateKey, availableDaysOfWeek, todayStart])
+
+  useEffect(() => {
+    if (!selectedDate) {
+      setSlotsDialogOpen(false)
+      setSelectedTime(null)
+    }
+  }, [selectedDate])
+
+  useEffect(() => {
+    setSlotsDialogOpen(false)
+    setSelectedTime(null)
+  }, [selectedDoctorId])
 
   useLayoutEffect(() => {
     const node = calendarCardRef.current
@@ -325,8 +399,29 @@ const PatientAppointments = () => {
     [selectedDoctor, availableDaysOfWeek, displayMonth],
   )
 
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date)
+    setSelectedTime(null)
+
+    if (!date || !selectedDoctor) {
+      setSlotsDialogOpen(false)
+      return
+    }
+
+    if (
+      !isDateWithinBookingWindow(date, todayStart) ||
+      !isDateOnDoctorAvailableDay(date, availableDaysOfWeek)
+    ) {
+      setSlotsDialogOpen(false)
+      return
+    }
+
+    setSlotsDialogOpen(true)
+  }
+
   const handleBookAppointment = () => {
-    if (!selectedDoctor || !selectedDate || !concern.trim()) return
+    if (!selectedDoctor || !selectedDate || !selectedTime || !concern.trim())
+      return
 
     setAppointments((prev) => [
       {
@@ -339,6 +434,7 @@ const PatientAppointments = () => {
       ...prev,
     ])
     setConcern("")
+    setSelectedTime(null)
   }
 
   return (
@@ -461,7 +557,7 @@ const PatientAppointments = () => {
                   month={displayMonth}
                   onMonthChange={setDisplayMonth}
                   selected={selectedDate}
-                  onSelect={setSelectedDate}
+                  onSelect={handleDateSelect}
                   disabled={calendarDisabled}
                   modifiers={{
                     doctorAvailable: (date) => {
@@ -533,8 +629,13 @@ const PatientAppointments = () => {
                   {selectedDate ? (
                     <>
                       <br />
-                      <span className="font-medium text-slate-800">Date:</span>{" "}
+                      <span className="font-medium text-slate-800">
+                        Date & Time:
+                      </span>{" "}
                       {format(selectedDate, "MMM d, yyyy")}
+                      {selectedTime
+                        ? ` | ${formatSlotLabel(selectedTime)}`
+                        : null}
                     </>
                   ) : null}
                 </div>
@@ -542,7 +643,12 @@ const PatientAppointments = () => {
 
               <Button
                 type="button"
-                disabled={!selectedDoctor || !selectedDate || !concern.trim()}
+                disabled={
+                  !selectedDoctor ||
+                  !selectedDate ||
+                  !selectedTime ||
+                  !concern.trim()
+                }
                 onClick={handleBookAppointment}
                 className="h-10 w-full shrink-0 rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
               >
@@ -628,6 +734,65 @@ const PatientAppointments = () => {
           </Card>
         </section>
       </div>
+
+      <Dialog
+        open={slotsDialogOpen}
+        onOpenChange={setSlotsDialogOpen}
+      >
+        <DialogContent
+          overlayClassName="bg-slate-900/15 backdrop-blur-none"
+          className="max-w-[280px] gap-0 border-slate-200 p-0 shadow-lg sm:max-w-[300px]"
+        >
+          <DialogHeader className="border-b-0 px-5 pt-5 pb-2">
+            <DialogTitle className="text-base">Choose a time</DialogTitle>
+            {selectedDate ? (
+              <DialogDescription>
+                {format(selectedDate, "EEEE, MMM d, yyyy")}
+              </DialogDescription>
+            ) : null}
+          </DialogHeader>
+
+          <div className="px-5 pb-5">
+            {isLoadingSlots ? (
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton
+                    key={index}
+                    className="h-9 w-full rounded-full"
+                  />
+                ))}
+              </div>
+            ) : slotsError ? (
+              <p className="text-center text-sm text-red-600">{slotsError}</p>
+            ) : availableSlots.length === 0 ? (
+              <p className="text-center text-sm text-slate-500">
+                No time slots available for this date.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTime(slot)
+                      setSlotsDialogOpen(false)
+                    }}
+                    className={cn(
+                      "rounded-full border bg-white px-3 py-2 text-sm font-medium transition-colors",
+                      selectedTime === slot
+                        ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                        : "border-slate-300 text-sky-600 hover:border-sky-300 hover:bg-sky-50",
+                    )}
+                  >
+                    {formatSlotLabel(slot)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
