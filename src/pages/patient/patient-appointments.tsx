@@ -7,6 +7,7 @@ import {
   type ComponentProps,
 } from "react"
 import { format } from "date-fns"
+import { toast } from "sonner"
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -241,6 +242,8 @@ const PatientAppointments = () => {
     useDoctorStore()
 
   const fetchWeekSlots = useAppointmentStore((state) => state.fetchWeekSlots)
+  const createAppointment = useAppointmentStore((state) => state.createAppointment)
+  const isBooking = useAppointmentStore((state) => state.isBooking)
   const clearWeekSlots = useAppointmentStore((state) => state.clearWeekSlots)
   const weekSlots = useAppointmentStore((state) => state.weekSlots)
   const isLoadingSlots = useAppointmentStore((state) => state.isLoadingSlots)
@@ -419,22 +422,58 @@ const PatientAppointments = () => {
     setSlotsDialogOpen(true)
   }
 
-  const handleBookAppointment = () => {
-    if (!selectedDoctor || !selectedDate || !selectedTime || !concern.trim())
+  const handleBookAppointment = async () => {
+    if (
+      !selectedDoctor ||
+      !selectedDate ||
+      !selectedDateKey ||
+      !selectedTime ||
+      !concern.trim()
+    ) {
       return
+    }
 
-    setAppointments((prev) => [
-      {
-        id: crypto.randomUUID(),
-        doctorName: selectedDoctor.name,
-        date: selectedDate,
-        roomLink: null,
-        status: "Pending",
-      },
-      ...prev,
-    ])
-    setConcern("")
-    setSelectedTime(null)
+    try {
+      await createAppointment({
+        doctor_profile_id: selectedDoctor.id,
+        appointment_date: selectedDateKey,
+        start_time: selectedTime,
+        patient_notes: concern.trim(),
+      })
+
+      toast.success("Appointment Success")
+
+      const [hours, minutes] = selectedTime.split(":").map(Number)
+      const appointmentDateTime = new Date(selectedDate)
+      appointmentDateTime.setHours(hours, minutes ?? 0, 0, 0)
+
+      setAppointments((prev) => [
+        {
+          id: crypto.randomUUID(),
+          doctorName: selectedDoctor.name,
+          date: appointmentDateTime,
+          roomLink: null,
+          status: "Pending",
+        },
+        ...prev,
+      ])
+
+      setSelectedDoctor(null)
+      setSelectedDate(undefined)
+      setSelectedTime(null)
+      setSlotsDialogOpen(false)
+      setConcern("")
+      clearWeekSlots()
+
+      const currentMonth = new Date()
+      currentMonth.setDate(1)
+      currentMonth.setHours(0, 0, 0, 0)
+      setDisplayMonth(currentMonth)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to book appointment"
+      toast.error(message)
+    }
   }
 
   return (
@@ -644,15 +683,18 @@ const PatientAppointments = () => {
               <Button
                 type="button"
                 disabled={
+                  isBooking ||
                   !selectedDoctor ||
                   !selectedDate ||
                   !selectedTime ||
                   !concern.trim()
                 }
-                onClick={handleBookAppointment}
+                onClick={() => {
+                  handleBookAppointment().catch(() => undefined)
+                }}
                 className="h-10 w-full shrink-0 rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
               >
-                Book appointment
+                {isBooking ? "Booking…" : "Book appointment"}
               </Button>
             </CardContent>
           </Card>

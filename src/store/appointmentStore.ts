@@ -20,10 +20,31 @@ export function getSlotsForDate(
   return response.days.find((day) => day.date === date)?.slots ?? []
 }
 
+export interface CreateAppointmentPayload {
+  doctor_profile_id: number
+  appointment_date: string
+  start_time: string
+  patient_notes: string
+}
+
+function getErrorMessage(err: unknown, fallback: string) {
+  if (axios.isAxiosError(err)) {
+    return String(
+      err.response?.data?.message ??
+        err.response?.data?.error ??
+        err.message ??
+        fallback,
+    )
+  }
+  return fallback
+}
+
 interface AppointmentStoreState {
   weekSlots: WeekSlotsResponse | null
   isLoadingSlots: boolean
   slotsError: string | null
+  isBooking: boolean
+  bookingError: string | null
 }
 
 interface AppointmentStoreActions {
@@ -31,8 +52,10 @@ interface AppointmentStoreActions {
     doctorId: number,
     startDate: string,
   ) => Promise<WeekSlotsResponse>
+  createAppointment: (payload: CreateAppointmentPayload) => Promise<void>
   clearWeekSlots: () => void
   clearSlotsError: () => void
+  clearBookingError: () => void
 }
 
 const useAppointmentStore = create<
@@ -41,6 +64,10 @@ const useAppointmentStore = create<
   weekSlots: null,
   isLoadingSlots: false,
   slotsError: null,
+  isBooking: false,
+  bookingError: null,
+
+  clearBookingError: () => set({ bookingError: null }),
 
   clearWeekSlots: () =>
     set((state) => {
@@ -72,6 +99,18 @@ const useAppointmentStore = create<
           err.message)
         : "Failed to load time slots"
       set({ slotsError: String(message), isLoadingSlots: false })
+      throw err
+    }
+  },
+
+  createAppointment: async (payload) => {
+    set({ isBooking: true, bookingError: null })
+    try {
+      await api.post("/appointments", payload)
+      set({ isBooking: false })
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to book appointment")
+      set({ bookingError: message, isBooking: false })
       throw err
     }
   },
