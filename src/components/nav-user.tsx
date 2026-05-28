@@ -33,12 +33,14 @@ function getInitials(name: string): string {
 
 export function NavUser({
   user,
+  onAccountClick,
 }: {
   user: {
     name: string
     email: string
     avatar: string
   }
+  onAccountClick?: () => void
 }) {
   const { isMobile } = useSidebar()
   const { logout } = useAuthStore()
@@ -91,7 +93,12 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  onAccountClick?.()
+                }}
+              >
                 <BadgeCheckIcon />
                 Account
               </DropdownMenuItem>
