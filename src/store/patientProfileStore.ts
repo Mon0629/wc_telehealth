@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import useAuthStore from "@/store/authStore"
 
 export interface PatientProfileDetails {
   avatarUrl: string
@@ -37,7 +38,10 @@ const usePatientProfileStore = create<PatientProfileState>()(
       isOpen: false,
       profile: emptyProfile,
       openProfile: () => set({ isOpen: true }),
-      closeProfile: () => set({ isOpen: false }),
+      closeProfile: () => {
+        if (useAuthStore.getState().isFirstLogin) return
+        set({ isOpen: false })
+      },
       setProfile: (profile) => set({ profile }),
     }),
     {

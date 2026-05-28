@@ -157,7 +157,7 @@ function SectionHeading({
 }
 
 export function PatientProfileModal() {
-  const { user } = useAuthStore()
+  const { user, isFirstLogin, completeFirstLogin } = useAuthStore()
   const { isOpen, closeProfile, profile, setProfile } = usePatientProfileStore()
 
   const [form, setForm] = useState<PatientProfileDetails>(profile)
@@ -185,7 +185,12 @@ export function PatientProfileModal() {
     setIsSaving(true)
     try {
       setProfile(form)
-      toast.success("Profile updated successfully.")
+      if (isFirstLogin) {
+        completeFirstLogin()
+        toast.success("Profile completed! You can now use Konsultify.")
+      } else {
+        toast.success("Profile updated successfully.")
+      }
       closeProfile()
     } finally {
       setIsSaving(false)
@@ -195,9 +200,20 @@ export function PatientProfileModal() {
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ")
   const email = user?.email ?? ""
 
+  const dialogOpen = isOpen || isFirstLogin
+
+  const handleDismiss = () => {
+    if (!isFirstLogin) closeProfile()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && closeProfile()}>
-      <DialogContent className="max-w-xl p-0" showCloseButton>
+    <Dialog open={dialogOpen} onOpenChange={(open) => !open && handleDismiss()}>
+      <DialogContent
+        className="max-w-xl p-0"
+        showCloseButton={!isFirstLogin}
+        onInteractOutside={(e) => isFirstLogin && e.preventDefault()}
+        onEscapeKeyDown={(e) => isFirstLogin && e.preventDefault()}
+      >
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <DialogHeader className="shrink-0 bg-gradient-to-br from-sky-50/80 to-white">
             <ProfileAvatarPicker
@@ -207,7 +223,9 @@ export function PatientProfileModal() {
               onChange={(url) => updateField("avatarUrl", url)}
             />
             <DialogDescription className="text-center mt-4">
-              Keep your health and contact details up to date for better care.
+              {isFirstLogin
+                ? "Welcome! Complete your profile to start using Konsultify."
+                : "Keep your health and contact details up to date for better care."}
             </DialogDescription>
           </DialogHeader>
 
@@ -374,22 +392,28 @@ export function PatientProfileModal() {
             </FieldGroup>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full border-slate-200"
-              onClick={closeProfile}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
+          <DialogFooter className={isFirstLogin ? "sm:justify-center" : undefined}>
+            {!isFirstLogin ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full border-slate-200"
+                onClick={closeProfile}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+            ) : null}
             <Button
               type="submit"
               className="rounded-full bg-sky-600 text-white hover:bg-sky-700"
               disabled={isSaving}
             >
-              {isSaving ? "Saving…" : "Save profile"}
+              {isSaving
+                ? "Saving…"
+                : isFirstLogin
+                  ? "Complete profile"
+                  : "Save profile"}
             </Button>
           </DialogFooter>
         </form>

@@ -69,7 +69,7 @@ const doctorNav = [
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuthStore()
+  const { user, isFirstLogin } = useAuthStore()
   const openPatientProfile = usePatientProfileStore((s) => s.openProfile)
   const patientAvatarUrl = usePatientProfileStore((s) => s.profile.avatarUrl)
   const openDoctorProfile = useDoctorProfileStore((s) => s.openProfile)
@@ -81,6 +81,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const displayName = user
     ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email
     : "Guest"
+
+  React.useEffect(() => {
+    if (!isFirstLogin) return
+    if (isDoctor) {
+      openDoctorProfile()
+    } else {
+      openPatientProfile()
+    }
+  }, [isFirstLogin, isDoctor, openDoctorProfile, openPatientProfile])
 
   return (
     <>
