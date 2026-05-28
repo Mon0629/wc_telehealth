@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react"
-import { CameraIcon, HeartPulseIcon, MapPinIcon, UserIcon } from "lucide-react"
+import {
+  CameraIcon,
+  HeartPulseIcon,
+  MapPinIcon,
+  UserIcon,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -14,7 +19,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import {
   Field,
@@ -29,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import useAuthStore from "@/store/authStore"
 import usePatientProfileStore, {
   type PatientProfileDetails,
+  normalizePatientProfile,
 } from "@/store/patientProfileStore"
 
 const inputClassName =
@@ -36,6 +41,9 @@ const inputClassName =
 
 const readOnlyClassName =
   "h-11 cursor-not-allowed rounded-xl border-slate-200 bg-slate-50 px-4 text-slate-600"
+
+const textareaClassName =
+  "resize-none rounded-xl border-sky-100 bg-sky-50/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"]
@@ -59,7 +67,7 @@ function ProfileAvatarPicker({
   avatarUrl: string
   displayName: string
   email: string
-  onChange: (url: string) => void
+  onChange: (url: string, file: File | null) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initials = getInitials(displayName, email)
@@ -81,7 +89,7 @@ function ProfileAvatarPicker({
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        onChange(reader.result)
+        onChange(reader.result, file)
       }
     }
     reader.onerror = () => toast.error("Could not read the image. Try again.")
@@ -117,19 +125,17 @@ function ProfileAvatarPicker({
         className="sr-only"
         onChange={handleFileChange}
       />
-      <div className="flex flex-wrap justify-center gap-2">
-        {avatarUrl ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="rounded-full text-slate-500 hover:text-slate-900"
-            onClick={() => onChange("")}
-          >
-            Remove
-          </Button>
-        ) : null}
-      </div>
+      {avatarUrl ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="mt-2 rounded-full text-slate-500 hover:text-slate-900"
+          onClick={() => onChange("", null)}
+        >
+          Remove photo
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -145,8 +151,8 @@ function SectionHeading({
 }) {
   return (
     <div className="flex items-start gap-3 pb-1">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-        <Icon className="size-4" />
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100">
+        <Icon className="size-4 text-sky-600" />
       </div>
       <div>
         <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -158,33 +164,55 @@ function SectionHeading({
 
 export function PatientProfileModal() {
   const { user, isFirstLogin, completeFirstLogin } = useAuthStore()
-  const { isOpen, closeProfile, profile, setProfile } = usePatientProfileStore()
+  const { isOpen, closeProfile, profile, saveProfile, isLoading, clearError } =
+    usePatientProfileStore()
 
-  const [form, setForm] = useState<PatientProfileDetails>(profile)
-  const [isSaving, setIsSaving] = useState(false)
+  const [form, setForm] = useState<PatientProfileDetails>(() =>
+    normalizePatientProfile(profile),
+  )
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setForm({
-        ...profile,
-        avatarUrl: profile.avatarUrl ?? "",
-        phone: profile.phone || user?.phone || "",
-      })
+      setForm(
+        normalizePatientProfile({
+          ...profile,
+          phone: profile.phone || user?.phone || "",
+        }),
+      )
+      setAvatarFile(null)
+      clearError()
     }
-  }, [isOpen, profile, user?.phone])
+  }, [isOpen, profile, user?.phone, clearError])
 
   const updateField = <K extends keyof PatientProfileDetails>(
     key: K,
-    value: PatientProfileDetails[K]
+    value: PatientProfileDetails[K],
   ) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSaving(true)
+
+    if (!form.birthday) {
+      toast.error("Please enter your birthday.")
+      return
+    }
+    if (!form.phone.trim()) {
+      toast.error("Please enter your phone number.")
+      return
+    }
+    if (!form.address.trim()) {
+      toast.error("Please enter your address.")
+      return
+    }
+
     try {
-      setProfile(form)
+      const savedProfile = await saveProfile(form, avatarFile)
+      setForm(savedProfile)
+      setAvatarFile(null)
+
       if (isFirstLogin) {
         completeFirstLogin()
         toast.success("Profile completed! You can now use Konsultify.")
@@ -192,14 +220,16 @@ export function PatientProfileModal() {
         toast.success("Profile updated successfully.")
       }
       closeProfile()
-    } finally {
-      setIsSaving(false)
+    } catch {
+      toast.error(
+        usePatientProfileStore.getState().error ??
+          "Could not save profile. Please try again.",
+      )
     }
   }
 
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ")
   const email = user?.email ?? ""
-
   const dialogOpen = isOpen || isFirstLogin
 
   const handleDismiss = () => {
@@ -220,9 +250,12 @@ export function PatientProfileModal() {
               avatarUrl={form.avatarUrl}
               displayName={displayName}
               email={email}
-              onChange={(url) => updateField("avatarUrl", url)}
+              onChange={(url, file) => {
+                updateField("avatarUrl", url)
+                setAvatarFile(file)
+              }}
             />
-            <DialogDescription className="text-center mt-4">
+            <DialogDescription className="mt-4 text-center">
               {isFirstLogin
                 ? "Welcome! Complete your profile to start using Konsultify."
                 : "Keep your health and contact details up to date for better care."}
@@ -349,7 +382,7 @@ export function PatientProfileModal() {
                     placeholder="Street, city, province, postal code"
                     value={form.address}
                     onChange={(e) => updateField("address", e.target.value)}
-                    className="min-h-[80px] resize-none rounded-xl border-sky-100 bg-sky-50/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                    className={`${textareaClassName} min-h-[80px]`}
                     required
                   />
                 </Field>
@@ -364,28 +397,30 @@ export function PatientProfileModal() {
                 />
                 <Field className="gap-2">
                   <FieldLabel htmlFor="allergies">Allergies</FieldLabel>
-                  <Textarea
+                  <Input
                     id="allergies"
-                    placeholder="e.g. Penicillin, peanuts, latex — or none"
+                    placeholder="e.g. Penicillin, Peanuts, Latex"
                     value={form.allergies}
                     onChange={(e) => updateField("allergies", e.target.value)}
-                    className="min-h-[72px] resize-none rounded-xl border-sky-100 bg-sky-50/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                    className={inputClassName}
                   />
                   <FieldDescription>
-                    List any known allergies so providers can avoid harmful treatments.
+                    Comma-separated list (e.g. Penicillin,Peanuts). Leave blank if
+                    none.
                   </FieldDescription>
                 </Field>
                 <Field className="gap-2">
                   <FieldLabel htmlFor="conditions">Medical conditions</FieldLabel>
-                  <Textarea
+                  <Input
                     id="conditions"
-                    placeholder="e.g. Asthma, hypertension, diabetes — or none"
+                    placeholder="e.g. Asthma, Hypertension, Diabetes"
                     value={form.conditions}
                     onChange={(e) => updateField("conditions", e.target.value)}
-                    className="min-h-[72px] resize-none rounded-xl border-sky-100 bg-sky-50/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                    className={inputClassName}
                   />
                   <FieldDescription>
-                    Ongoing or past conditions that may affect your care plan.
+                    Comma-separated list (e.g. Asthma,Hypertension). Leave blank
+                    if none.
                   </FieldDescription>
                 </Field>
               </FieldSet>
@@ -399,7 +434,7 @@ export function PatientProfileModal() {
                 variant="outline"
                 className="rounded-full border-slate-200"
                 onClick={closeProfile}
-                disabled={isSaving}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
@@ -407,9 +442,9 @@ export function PatientProfileModal() {
             <Button
               type="submit"
               className="rounded-full bg-sky-600 text-white hover:bg-sky-700"
-              disabled={isSaving}
+              disabled={isLoading}
             >
-              {isSaving
+              {isLoading
                 ? "Saving…"
                 : isFirstLogin
                   ? "Complete profile"

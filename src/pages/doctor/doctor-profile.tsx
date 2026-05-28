@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
 import useAuthStore from "@/store/authStore"
 import useDoctorProfileStore, {
   type AvailabilitySlot,
@@ -39,6 +40,8 @@ import useDoctorProfileStore, {
   type DoctorProfileDetails,
   normalizeDoctorProfile,
 } from "@/store/doctorProfileStore"
+
+// ─── style constants ─────────────────────────────────────────────────────────
 
 const inputClassName =
   "h-11 rounded-xl border-sky-100 bg-sky-50/50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
@@ -51,43 +54,35 @@ const readOnlyClassName =
 const textareaClassName =
   "resize-none rounded-xl border-sky-100 bg-sky-50/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024
-const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"]
-
-const DAYS_OF_WEEK: { value: DayOfWeek; label: string }[] = [
-  { value: "MONDAY", label: "Monday" },
-  { value: "TUESDAY", label: "Tuesday" },
-  { value: "WEDNESDAY", label: "Wednesday" },
-  { value: "THURSDAY", label: "Thursday" },
-  { value: "FRIDAY", label: "Friday" },
-  { value: "SATURDAY", label: "Saturday" },
-  { value: "SUNDAY", label: "Sunday" },
-]
-
 const selectClassName =
   "h-11 w-full rounded-xl border border-sky-100 bg-sky-50/50 px-4 text-sm text-slate-900 outline-none focus-visible:border-sky-300 focus-visible:ring-3 focus-visible:ring-sky-200/60"
 
+// ─── constants ───────────────────────────────────────────────────────────────
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"]
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
 function getDayOptionsForSlot(
   slots: AvailabilitySlot[],
-  slotId: string
+  slotId: string,
 ): { value: DayOfWeek; label: string }[] {
   const usedByOthers = new Set(
-    slots.filter((s) => s.id !== slotId).map((s) => s.dayOfWeek)
+    slots.filter((s) => s.id !== slotId).map((s) => s.dayOfWeek),
   )
   const currentDay = slots.find((s) => s.id === slotId)?.dayOfWeek
-
   return DAYS_OF_WEEK.filter(
-    (day) => !usedByOthers.has(day.value) || day.value === currentDay
+    (day) => !usedByOthers.has(day.value) || day.value === currentDay,
   )
 }
 
 function createAvailabilitySlot(
-  existingSlots: AvailabilitySlot[]
+  existingSlots: AvailabilitySlot[],
 ): AvailabilitySlot | null {
   const usedDays = new Set(existingSlots.map((s) => s.dayOfWeek))
   const nextDay = DAYS_OF_WEEK.find((day) => !usedDays.has(day.value))
   if (!nextDay) return null
-
   return {
     id: crypto.randomUUID(),
     dayOfWeek: nextDay.value,
@@ -118,6 +113,8 @@ function getInitials(name: string, email: string): string {
   return fromName || email.slice(0, 2).toUpperCase()
 }
 
+// ─── ProfileAvatarPicker ─────────────────────────────────────────────────────
+
 function ProfileAvatarPicker({
   avatarUrl,
   displayName,
@@ -127,7 +124,8 @@ function ProfileAvatarPicker({
   avatarUrl: string
   displayName: string
   email: string
-  onChange: (url: string) => void
+  /** Called with (previewDataUrl, rawFile). rawFile is null on remove. */
+  onChange: (url: string, file: File | null) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initials = getInitials(displayName, email)
@@ -149,7 +147,7 @@ function ProfileAvatarPicker({
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        onChange(reader.result)
+        onChange(reader.result, file)
       }
     }
     reader.onerror = () => toast.error("Could not read the image. Try again.")
@@ -191,7 +189,7 @@ function ProfileAvatarPicker({
           variant="ghost"
           size="sm"
           className="mt-2 rounded-full text-slate-500 hover:text-slate-900"
-          onClick={() => onChange("")}
+          onClick={() => onChange("", null)}
         >
           Remove photo
         </Button>
@@ -199,6 +197,8 @@ function ProfileAvatarPicker({
     </div>
   )
 }
+
+// ─── AvailabilityEditor ───────────────────────────────────────────────────────
 
 function AvailabilityEditor({
   slots,
@@ -209,23 +209,21 @@ function AvailabilityEditor({
 }) {
   const safeSlots = Array.isArray(slots) ? slots : []
 
-  const updateSlot = (id: string, patch: Partial<AvailabilitySlot>) => {
+  const updateSlot = (id: string, patch: Partial<AvailabilitySlot>) =>
     onChange(safeSlots.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  }
 
-  const removeSlot = (id: string) => {
+  const removeSlot = (id: string) =>
     onChange(safeSlots.filter((s) => s.id !== id))
-  }
 
   const allDaysScheduled = safeSlots.length >= DAYS_OF_WEEK.length
 
   const addSlot = () => {
-    const nextSlot = createAvailabilitySlot(safeSlots)
-    if (!nextSlot) {
+    const next = createAvailabilitySlot(safeSlots)
+    if (!next) {
       toast.error("All days of the week already have availability.")
       return
     }
-    onChange([...safeSlots, nextSlot])
+    onChange([...safeSlots, next])
   }
 
   return (
@@ -247,9 +245,7 @@ function AvailabilityEditor({
                   id={`day-${slot.id}`}
                   value={slot.dayOfWeek}
                   onChange={(e) =>
-                    updateSlot(slot.id, {
-                      dayOfWeek: e.target.value as DayOfWeek,
-                    })
+                    updateSlot(slot.id, { dayOfWeek: e.target.value as DayOfWeek })
                   }
                   className={selectClassName}
                 >
@@ -266,9 +262,7 @@ function AvailabilityEditor({
                   id={`start-${slot.id}`}
                   type="time"
                   value={slot.startTime}
-                  onChange={(e) =>
-                    updateSlot(slot.id, { startTime: e.target.value })
-                  }
+                  onChange={(e) => updateSlot(slot.id, { startTime: e.target.value })}
                   className={timeInputClassName}
                   required
                 />
@@ -279,9 +273,7 @@ function AvailabilityEditor({
                   id={`end-${slot.id}`}
                   type="time"
                   value={slot.endTime}
-                  onChange={(e) =>
-                    updateSlot(slot.id, { endTime: e.target.value })
-                  }
+                  onChange={(e) => updateSlot(slot.id, { endTime: e.target.value })}
                   className={timeInputClassName}
                   required
                 />
@@ -318,6 +310,8 @@ function AvailabilityEditor({
   )
 }
 
+// ─── SectionHeading ───────────────────────────────────────────────────────────
+
 function SectionHeading({
   icon: Icon,
   title,
@@ -340,27 +334,30 @@ function SectionHeading({
   )
 }
 
+// ─── DoctorProfileModal ───────────────────────────────────────────────────────
+
 export function DoctorProfileModal() {
   const { user, isFirstLogin, completeFirstLogin } = useAuthStore()
-  const { isOpen, closeProfile, profile, setProfile } = useDoctorProfileStore()
+  const { isOpen, closeProfile, profile, saveProfile, isLoading, clearError } =
+    useDoctorProfileStore()
 
   const [form, setForm] = useState<DoctorProfileDetails>(() =>
-    normalizeDoctorProfile(profile)
+    normalizeDoctorProfile(profile),
   )
-  const [isSaving, setIsSaving] = useState(false)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   useEffect(() => {
     if (isOpen) {
       setForm(normalizeDoctorProfile(profile))
+      setAvatarFile(null)
+      clearError()
     }
-  }, [isOpen, profile])
+  }, [isOpen, profile, clearError])
 
   const updateField = <K extends keyof DoctorProfileDetails>(
     key: K,
-    value: DoctorProfileDetails[K]
-  ) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
-  }
+    value: DoctorProfileDetails[K],
+  ) => setForm((prev) => ({ ...prev, [key]: value }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -381,15 +378,17 @@ export function DoctorProfileModal() {
     for (const slot of availability) {
       if (slot.startTime >= slot.endTime) {
         toast.error(
-          `End time must be after start time for ${getDayLabel(slot.dayOfWeek)}.`
+          `End time must be after start time for ${getDayLabel(slot.dayOfWeek)}.`,
         )
         return
       }
     }
 
-    setIsSaving(true)
     try {
-      setProfile(normalizeDoctorProfile(form))
+      const savedProfile = await saveProfile(form, avatarFile)
+      setForm(savedProfile)
+      setAvatarFile(null)
+
       if (isFirstLogin) {
         completeFirstLogin()
         toast.success("Profile completed! You can now use Konsultify.")
@@ -397,14 +396,16 @@ export function DoctorProfileModal() {
         toast.success("Profile updated successfully.")
       }
       closeProfile()
-    } finally {
-      setIsSaving(false)
+    } catch {
+      toast.error(
+        useDoctorProfileStore.getState().error ??
+          "Could not save profile. Please try again.",
+      )
     }
   }
 
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ")
   const email = user?.email ?? ""
-
   const dialogOpen = isOpen || isFirstLogin
 
   const handleDismiss = () => {
@@ -425,7 +426,10 @@ export function DoctorProfileModal() {
               avatarUrl={form.avatarUrl}
               displayName={displayName}
               email={email}
-              onChange={(url) => updateField("avatarUrl", url)}
+              onChange={(url, file) => {
+                updateField("avatarUrl", url)
+                setAvatarFile(file)
+              }}
             />
 
             <DialogDescription className="text-center">
@@ -438,9 +442,10 @@ export function DoctorProfileModal() {
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <FieldGroup className="gap-8">
               <Field className="gap-2">
+                <FieldLabel htmlFor="bio">Bio</FieldLabel>
                 <Textarea
                   id="bio"
-                  placeholder='Bio: e.g. Specialized doctor in internal medicine with 10 years of experience'
+                  placeholder="e.g. Specialized doctor in internal medicine with 10 years of experience"
                   value={form.bio}
                   onChange={(e) => updateField("bio", e.target.value)}
                   className={`${textareaClassName} min-h-0 w-full py-2 text-sm`}
@@ -570,11 +575,13 @@ export function DoctorProfileModal() {
                 <SectionHeading
                   icon={CalendarClockIcon}
                   title="Availability"
-                  description="Add your weekly schedule. You can set multiple slots per day."
+                  description="Add your weekly schedule so patients know when to book."
                 />
                 <AvailabilityEditor
                   slots={form.availability ?? []}
-                  onChange={(availability) => updateField("availability", availability)}
+                  onChange={(availability) =>
+                    updateField("availability", availability)
+                  }
                 />
               </FieldSet>
             </FieldGroup>
@@ -587,7 +594,7 @@ export function DoctorProfileModal() {
                 variant="outline"
                 className="rounded-full border-slate-200"
                 onClick={closeProfile}
-                disabled={isSaving}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
@@ -595,9 +602,9 @@ export function DoctorProfileModal() {
             <Button
               type="submit"
               className="rounded-full bg-sky-600 text-white hover:bg-sky-700"
-              disabled={isSaving}
+              disabled={isLoading}
             >
-              {isSaving
+              {isLoading
                 ? "Saving…"
                 : isFirstLogin
                   ? "Complete profile"

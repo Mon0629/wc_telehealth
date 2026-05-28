@@ -1,5 +1,9 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import axios from "axios"
+import api from "@/lib/axios"
+import { buildDoctorProfileFormData } from "@/lib/doctor-profile-payload"
+import { extractAvatarUrlFromProfileResponse } from "@/lib/profile-response"
 import useAuthStore from "@/store/authStore"
 
 export type DayOfWeek =
@@ -53,22 +57,68 @@ function normalizeDoctorProfile(
 interface DoctorProfileState {
   isOpen: boolean
   profile: DoctorProfileDetails
+  isLoading: boolean
+  error: string | null
+}
+
+interface DoctorProfileActions {
   openProfile: () => void
   closeProfile: () => void
   setProfile: (profile: DoctorProfileDetails) => void
+  saveProfile: (
+    profile: DoctorProfileDetails,
+    avatarFile?: File | null
+  ) => Promise<DoctorProfileDetails>
+  clearError: () => void
 }
 
-const useDoctorProfileStore = create<DoctorProfileState>()(
+const useDoctorProfileStore = create<DoctorProfileState & DoctorProfileActions>()(
   persist(
     (set) => ({
       isOpen: false,
       profile: emptyProfile,
+      isLoading: false,
+      error: null,
+
       openProfile: () => set({ isOpen: true }),
       closeProfile: () => {
         if (useAuthStore.getState().isFirstLogin) return
         set({ isOpen: false })
       },
-      setProfile: (profile) => set({ profile: normalizeDoctorProfile(profile) }),
+      setProfile: (profile) =>
+        set({ profile: normalizeDoctorProfile(profile) }),
+      clearError: () => set({ error: null }),
+
+      saveProfile: async (profile, avatarFile = null) => {
+        set({ isLoading: true, error: null })
+        try {
+          const formData = buildDoctorProfileFormData(profile, avatarFile)
+          const { data } = await api.put("/profile/me", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          })
+
+          const cloudinaryAvatarUrl =
+            extractAvatarUrlFromProfileResponse(data) ?? profile.avatarUrl
+
+          const savedProfile = normalizeDoctorProfile({
+            ...profile,
+            avatarUrl: cloudinaryAvatarUrl,
+          })
+
+          set({ profile: savedProfile, isLoading: false })
+          return savedProfile
+        } catch (err) {
+          let message = "Could not save profile. Please try again."
+          if (axios.isAxiosError(err)) {
+            message =
+              err.response?.data?.message ??
+              err.response?.data?.error ??
+              message
+          }
+          set({ error: message, isLoading: false })
+          throw err
+        }
+      },
     }),
     {
       name: "doctor-profile-storage",
