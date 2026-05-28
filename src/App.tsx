@@ -1,20 +1,55 @@
-import { Navigate, Route, Routes } from "react-router";
-import LandingPage from "@/pages/LandingPage";
-import Login from "@/pages/auth/Login";
-import Signup from "@/pages/auth/Signup";
-
-function App() {
-  return (
-    <Routes>
-      {/* Marketing landing page (hero, features, FAQ, etc.) */}
-      <Route path="/" element={<LandingPage />} />
-      {/* Dedicated login page */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      {/* Unknown paths → home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
-
-export default App;
+ "use client";
+ 
+ import { Navigate, Route, Routes } from "react-router";
+ import LandingPage from "@/pages/landing-page";
+ import Login from "@/pages/auth/login";
+ import Signup from "@/pages/auth/signup";
+ import RoleSelector from "@/pages/auth/role-seletor";
+ import EmailVerification from "@/pages/auth/email-verification";
+ import PatientDashboard from "@/pages/patient/patient-dashboard";
+ import DoctorDashboard from "@/pages/doctor/doctor-dashboard";
+ import { AppSidebar } from "@/components/app-sidebar";
+ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+ import { TooltipProvider } from "@/components/ui/tooltip";
+ 
+ export default function App() {
+   return (
+     <Routes>
+       <Route path="/" element={<LandingPage />} />
+       <Route path="/login" element={<Login />} />
+       <Route path="/signup" element={<Signup />} />
+       <Route path="/register" element={<RoleSelector />} />
+       <Route path="/email-verification" element={<EmailVerification />} />
+ 
+       <Route
+         path="/patient-dashboard"
+         element={
+           <TooltipProvider>
+             <SidebarProvider>
+               <AppSidebar />
+               <SidebarInset>
+                 <PatientDashboard />
+               </SidebarInset>
+             </SidebarProvider>
+           </TooltipProvider>
+         }
+       />
+ 
+       <Route
+         path="/doctor-dashboard"
+         element={
+           <TooltipProvider>
+             <SidebarProvider>
+               <AppSidebar />
+               <SidebarInset>
+                 <DoctorDashboard />
+               </SidebarInset>
+             </SidebarProvider>
+           </TooltipProvider>
+         }
+       />
+ 
+       <Route path="*" element={<Navigate to="/" replace />} />
+     </Routes>
+   );
+ }
