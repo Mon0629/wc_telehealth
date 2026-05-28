@@ -1,8 +1,14 @@
 import React from 'react'
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 const DoctorPatients = () => {
   return (
-    <div>D</div>
+    <div className="flex flex-1 flex-col">
+      <header className="flex h-12 items-center gap-2 px-4">
+        <SidebarTrigger />
+        <span className="text-sm font-medium text-slate-700">Patients</span>
+      </header>
+    </div>
   )
 }
 
