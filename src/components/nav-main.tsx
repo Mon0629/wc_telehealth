@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Link, useLocation } from "react-router"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -9,25 +10,32 @@ import {
 
 export function NavMain({
   items,
+  groupLabel = "Navigation",
 }: {
   items: {
     title: string
     url: string
     icon?: React.ReactNode
-    isActive?: boolean
   }[]
+  groupLabel?: string
 }) {
+  const { pathname } = useLocation()
+
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupLabel>{groupLabel}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.title}>
-            <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
-              <a href={item.url}>
+            <SidebarMenuButton
+              asChild
+              tooltip={item.title}
+              isActive={pathname === item.url}
+            >
+              <Link to={item.url}>
                 {item.icon}
                 <span>{item.title}</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
