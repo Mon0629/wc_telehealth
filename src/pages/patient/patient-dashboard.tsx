@@ -10,7 +10,7 @@ export default function PatientDashboard() {
         <span className="text-sm font-medium text-slate-700">Patient Dashboard</span>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="flex flex-1 flex-col gap-4 p-4 bg-amber-100">
         <div className="rounded-xl bg-muted/50 p-6">
           Select a menu item from the sidebar.
         </div>
