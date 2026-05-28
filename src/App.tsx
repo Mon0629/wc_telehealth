@@ -7,6 +7,11 @@ import EmailVerification from "@/pages/auth/email-verification";
 import PatientDashboard from "@/pages/patient/patient-dashboard";
 import DoctorDashboard from "@/pages/doctor/doctor-dashboard";
 import { AppSidebar } from "@/components/app-sidebar";
+import DoctorDiscovery from "@/pages/patient/patient-doctor-discovery"
+import MyAppointments from "@/pages/patient/patient-appointments";
+import MyMedicalRecords from "@/pages/patient/patient-medical-records";
+import DoctorAppointments from "@/pages/doctor/doctor-appointments";
+import DoctorPatients from "@/pages/doctor/doctor-patients";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useAuthStore from "@/store/authStore";
@@ -54,15 +59,15 @@ export default function App() {
       <Route element={<ProtectedLayout />}>
         <Route element={<RoleGuard allowed="PATIENT" />}>
           <Route path="/patient-dashboard" element={<PatientDashboard />} />
-          <Route path="/patient/doctor-discovery" element={<PatientDashboard />} />
-          <Route path="/patient/appointments" element={<PatientDashboard />} />
-          <Route path="/patient/medical-records" element={<PatientDashboard />} />
+          <Route path="/patient/doctor-discovery" element={<DoctorDiscovery />} />
+          <Route path="/patient/appointments" element={<MyAppointments />} />
+          <Route path="/patient/medical-records" element={<MyMedicalRecords />} />
         </Route>
 
         <Route element={<RoleGuard allowed="DOCTOR" />}>
           <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
-          <Route path="/doctor/patients" element={<DoctorDashboard />} />
-          <Route path="/doctor/appointments" element={<DoctorDashboard />} />
+          <Route path="/doctor/patients" element={<DoctorPatients />} />
+          <Route path="/doctor/appointments" element={<DoctorAppointments />} />
         </Route>
       </Route>
 
