@@ -66,7 +66,22 @@ export interface DoctorListItem {
   yearsExperience: number
   avatar: string
   available: boolean
+  /** API day_of_week values (1 = Monday … 7 = Sunday) when is_available is true */
+  availableDaysOfWeek: number[]
   availabilitySlots: string[]
+}
+
+/** Maps JS Date.getDay() (0 Sun … 6 Sat) to API day_of_week (1 Mon … 7 Sun). */
+export function getApiDayOfWeek(date: Date): number {
+  const jsDay = date.getDay()
+  return jsDay === 0 ? 7 : jsDay
+}
+
+export function isDateOnDoctorAvailableDay(
+  date: Date,
+  availableDaysOfWeek: number[],
+): boolean {
+  return availableDaysOfWeek.includes(getApiDayOfWeek(date))
 }
 
 const DAY_LABEL_BY_NUMBER = Object.fromEntries(
@@ -119,6 +134,10 @@ export function resolveRecommendationSymptoms(symptomsInput: string): string {
 }
 
 export function normalizeDoctorFromApi(doctor: DoctorApiItem): DoctorListItem {
+  const availableDaysOfWeek = doctor.availability
+    .filter((slot) => slot.is_available)
+    .map((slot) => slot.day_of_week)
+
   const availabilitySlots = doctor.availability
     .filter((slot) => slot.is_available && slot.start_time && slot.end_time)
     .map((slot) => {
@@ -135,7 +154,8 @@ export function normalizeDoctorFromApi(doctor: DoctorApiItem): DoctorListItem {
     education: doctor.profile_details?.education ?? "",
     yearsExperience: doctor.profile_details?.years_experience ?? 0,
     avatar: doctor.profile_picture_url ?? "",
-    available: doctor.availability.some((slot) => slot.is_available),
+    available: availableDaysOfWeek.length > 0,
+    availableDaysOfWeek,
     availabilitySlots,
   }
 }
@@ -226,10 +246,6 @@ const useDoctorStore = create<DoctorStoreState & DoctorStoreActions>()(
         }
 
         const doctor = normalizeDoctorFromApi(doctorApi)
-
-        console.log("[AI Recommendation] Request symptoms:", symptoms)
-        console.log("[AI Recommendation] Recommended doctor:", doctor)
-        console.log("[AI Recommendation] AI metadata:", data.ai)
 
         set({
           recommendedDoctor: doctor,
