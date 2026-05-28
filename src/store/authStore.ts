@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/lib/axios";
 import axios from "axios";
+import { parseAuthResponse } from "@/lib/auth-response";
 
 export interface User {
   id: number;
@@ -12,6 +13,7 @@ export interface User {
   phone?: string;
   emailVerified?: boolean;
   isActive?: boolean;
+  firstTimeLoggedIn?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +26,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  isFirstLogin: boolean;
 }
 
 interface AuthActions {
@@ -37,6 +40,7 @@ interface AuthActions {
     role: "PATIENT" | "DOCTOR";
   }) => Promise<void>;
   verifyEmailOtp: (payload: { email: string; otp: string }) => Promise<void>;
+  completeFirstLogin: () => void;
   logout: () => void;
   clearError: () => void;
   setPendingVerificationEmail: (email: string | null) => void;
@@ -52,32 +56,14 @@ const useAuthStore = create<AuthState & AuthActions>()(
       isLoading: false,
       error: null,
       isAuthenticated: false,
+      isFirstLogin: false,
 
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
           const { data } = await api.post("/auth/login", { email, password });
-
-          const accessToken: string | undefined =
-            data.accessToken ?? data.access_token ?? data.token;
-          const refreshToken: string | undefined =
-            data.refreshToken ?? data.refresh_token;
-
-          const rawUser = data.user;
-          const user: User | null = rawUser
-            ? {
-                id: rawUser.id,
-                email: rawUser.email,
-                firstName: rawUser.first_name,
-                lastName: rawUser.last_name,
-                role: rawUser.role,
-                phone: rawUser.phone,
-                emailVerified: rawUser.email_verified,
-                isActive: rawUser.is_active,
-                createdAt: rawUser.created_at,
-                updatedAt: rawUser.updated_at,
-              }
-            : null;
+          const { user, accessToken, refreshToken, isFirstLogin } =
+            parseAuthResponse(data);
 
           if (!accessToken) {
             throw new Error("Missing accessToken in login response.");
@@ -92,6 +78,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
             accessToken,
             refreshToken: refreshToken ?? null,
             isAuthenticated: true,
+            isFirstLogin,
             isLoading: false,
           });
         } catch (err) {
@@ -129,27 +116,8 @@ const useAuthStore = create<AuthState & AuthActions>()(
         set({ isLoading: true, error: null });
         try {
           const { data } = await api.post("/auth/verify-email", { email, otp });
-
-          const accessToken: string | undefined =
-            data.accessToken ?? data.access_token ?? data.token;
-          const refreshToken: string | undefined =
-            data.refreshToken ?? data.refresh_token;
-
-          const rawUser = data.user;
-          const user: User | null = rawUser
-            ? {
-                id: rawUser.id,
-                email: rawUser.email,
-                firstName: rawUser.first_name,
-                lastName: rawUser.last_name,
-                role: rawUser.role,
-                phone: rawUser.phone,
-                emailVerified: rawUser.email_verified,
-                isActive: rawUser.is_active,
-                createdAt: rawUser.created_at,
-                updatedAt: rawUser.updated_at,
-              }
-            : null;
+          const { user, accessToken, refreshToken, isFirstLogin } =
+            parseAuthResponse(data);
 
           if (!accessToken) {
             throw new Error("Missing accessToken in verification response.");
@@ -163,6 +131,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
             accessToken,
             refreshToken: refreshToken ?? null,
             isAuthenticated: true,
+            isFirstLogin,
             pendingVerificationEmail: null,
             isLoading: false,
           });
@@ -179,6 +148,14 @@ const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
+      completeFirstLogin: () =>
+        set((state) => ({
+          isFirstLogin: false,
+          user: state.user
+            ? { ...state.user, firstTimeLoggedIn: false }
+            : null,
+        })),
+
       logout: () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -188,6 +165,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
           refreshToken: null,
           pendingVerificationEmail: null,
           isAuthenticated: false,
+          isFirstLogin: false,
           error: null,
         });
       },
@@ -204,6 +182,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        isFirstLogin: state.isFirstLogin,
         pendingVerificationEmail: state.pendingVerificationEmail,
       }),
     }

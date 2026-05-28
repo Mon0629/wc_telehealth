@@ -21,6 +21,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import useAuthStore from "@/store/authStore"
+import usePatientProfileStore from "@/store/patientProfileStore"
+import useDoctorProfileStore from "@/store/doctorProfileStore"
+import { PatientProfileModal } from "@/pages/patient/patient-profile"
+import { DoctorProfileModal } from "@/pages/doctor/doctor-profile"
 import logo from "@/assets/vite.svg"
 
 const patientNav = [
@@ -65,7 +69,11 @@ const doctorNav = [
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuthStore()
+  const { user, isFirstLogin } = useAuthStore()
+  const openPatientProfile = usePatientProfileStore((s) => s.openProfile)
+  const patientAvatarUrl = usePatientProfileStore((s) => s.profile.avatarUrl)
+  const openDoctorProfile = useDoctorProfileStore((s) => s.openProfile)
+  const doctorAvatarUrl = useDoctorProfileStore((s) => s.profile.avatarUrl)
 
   const isDoctor = user?.role === "DOCTOR"
   const navItems = isDoctor ? doctorNav : patientNav
@@ -74,7 +82,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email
     : "Guest"
 
+  React.useEffect(() => {
+    if (!isFirstLogin) return
+    if (isDoctor) {
+      openDoctorProfile()
+    } else {
+      openPatientProfile()
+    }
+  }, [isFirstLogin, isDoctor, openDoctorProfile, openPatientProfile])
+
   return (
+    <>
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
@@ -105,12 +123,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           user={{
             name: displayName,
             email: user?.email ?? "",
-            avatar: "",
+            avatar: isDoctor ? doctorAvatarUrl : patientAvatarUrl,
           }}
+          onAccountClick={isDoctor ? openDoctorProfile : openPatientProfile}
         />
       </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>
+    {isDoctor ? <DoctorProfileModal /> : <PatientProfileModal />}
+    </>
   )
 }
