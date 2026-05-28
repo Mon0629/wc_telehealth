@@ -9,17 +9,30 @@ import {
   SparklesIcon,
   StethoscopeIcon,
   TagIcon,
+  WandSparklesIcon,
   XIcon,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import useDoctorStore, { type DoctorListItem } from "@/store/doctorStore"
+import useDoctorStore, {
+  type AiRecommendationMeta,
+  type DoctorListItem,
+} from "@/store/doctorStore"
 
 function formatFee(fee: string) {
   const amount = Number(fee)
@@ -42,10 +55,12 @@ function getInitials(name: string) {
 function DoctorCard({
   doctor,
   isSelected,
+  isAiMatch,
   onSelect,
 }: {
   doctor: DoctorListItem
   isSelected: boolean
+  isAiMatch?: boolean
   onSelect: () => void
 }) {
   return (
@@ -61,7 +76,11 @@ function DoctorCard({
       }}
       className={cn(
         "cursor-pointer gap-0 overflow-visible border-2 bg-white py-0 shadow-sm ring-0 transition-[border-color,box-shadow] hover:shadow-md",
-        isSelected ? "border-sky-400" : "border-slate-200",
+        isAiMatch
+          ? "border-indigo-500 shadow-md shadow-indigo-100"
+          : isSelected
+            ? "border-sky-400"
+            : "border-slate-200",
       )}
     >
       <CardContent className="p-4">
@@ -255,6 +274,222 @@ function DoctorDetailPanel({
   )
 }
 
+// ─── AI reveal card (pokemon-style) ───────────────────────────────────────────
+
+function AiRecommendationRevealDialog({
+  open,
+  onOpenChange,
+  doctor,
+  aiMeta,
+  onViewDetails,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  doctor: DoctorListItem
+  aiMeta: AiRecommendationMeta | null
+  onViewDetails: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-sm gap-0 overflow-visible border-0 bg-transparent p-0 shadow-none sm:max-w-sm"
+        showCloseButton={false}
+      >
+        <div className="relative mx-auto w-full max-w-[340px]">
+          <div className="absolute -inset-1 rounded-[1.35rem] bg-gradient-to-br from-violet-500 via-indigo-500 to-amber-400 opacity-90 blur-sm" />
+          <div className="relative overflow-hidden rounded-2xl border-2 border-white/80 bg-gradient-to-b from-indigo-50 via-white to-violet-50 shadow-2xl">
+            <div className="border-b border-indigo-100/80 bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold tracking-widest text-white uppercase">
+                  AI Match
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium text-white">
+                  <SparklesIcon className="size-3" />
+                  Recommended
+                </span>
+              </div>
+            </div>
+
+            <div className="relative px-4 pt-4 pb-2">
+              <div className="absolute inset-x-8 top-6 h-32 rounded-full bg-indigo-300/30 blur-2xl" />
+              <div className="relative mx-auto w-fit rounded-2xl border-4 border-white bg-white p-1 shadow-lg ring-2 ring-indigo-200">
+                <img
+                  src={doctor.avatar}
+                  alt={doctor.name}
+                  className="size-36 rounded-xl object-cover"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 px-4 pb-4 text-center">
+              <div>
+                <h3 className="text-xl font-bold tracking-tight text-slate-900">
+                  {doctor.name}
+                </h3>
+                <p className="mt-0.5 text-sm font-medium text-indigo-600">
+                  {doctor.specialization}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-left">
+                <div className="rounded-lg border border-indigo-100 bg-white/80 px-3 py-2">
+                  <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
+                    Consultation
+                  </p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {formatFee(doctor.fee)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-indigo-100 bg-white/80 px-3 py-2">
+                  <p className="text-[10px] font-semibold tracking-wide text-slate-400 uppercase">
+                    Experience
+                  </p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {doctor.yearsExperience > 0
+                      ? `${doctor.yearsExperience} yrs`
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {doctor.bio ? (
+                <p className="line-clamp-3 text-left text-xs leading-relaxed text-slate-500">
+                  {doctor.bio}
+                </p>
+              ) : null}
+
+              {aiMeta?.recommended_specializations?.length ? (
+                <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+                  {aiMeta.recommended_specializations.map((spec) => (
+                    <span
+                      key={spec}
+                      className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-medium text-indigo-700"
+                    >
+                      {spec}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex gap-2 border-t border-indigo-100/80 bg-white/60 px-4 py-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-9 flex-1 rounded-lg border-slate-200 text-sm"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false)
+                  onViewDetails()
+                }}
+                className="h-9 flex-1 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                View Details
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── AI recommendation dialog ─────────────────────────────────────────────────
+
+function AiRecommendationDialog({
+  open,
+  onOpenChange,
+  onOpenReveal,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onOpenReveal: () => void
+}) {
+  const [symptoms, setSymptoms] = useState("")
+  const {
+    fetchAiRecommendation,
+    isRecommending,
+    recommendationError,
+    clearRecommendationError,
+  } = useDoctorStore()
+
+  const handleReset = () => {
+    setSymptoms("")
+    clearRecommendationError()
+  }
+
+  const handleSubmit = async () => {
+    try {
+      await fetchAiRecommendation(symptoms)
+      setSymptoms("")
+      clearRecommendationError()
+      onOpenChange(false)
+      onOpenReveal()
+    } catch {
+      // Error is stored in the doctor store
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md gap-0 p-0 sm:max-w-md">
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle>AI Recommendation</DialogTitle>
+          <DialogDescription>
+            Tell us how you are feeling so we can suggest the right doctors for
+            you.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2 px-6 pb-6">
+          <Label htmlFor="symptoms" className="text-sm font-semibold text-slate-900">
+            Describe how you are feeling or the symptoms
+          </Label>
+          <Textarea
+            id="symptoms"
+            value={symptoms}
+            onChange={(e) => setSymptoms(e.target.value)}
+            placeholder="e.g. persistent headache, fever, and fatigue for 3 days..."
+            className="min-h-[120px] resize-y rounded-xl border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+          />
+          <p className="text-sm text-slate-500">
+            If you leave this blank, the AI will use your medical history
+            instead.
+          </p>
+
+          {recommendationError ? (
+            <p className="text-sm text-red-600">{recommendationError}</p>
+          ) : null}
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              className="h-9 rounded-lg border-slate-200 px-4 text-sm font-medium text-slate-700"
+            >
+              Reset
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isRecommending}
+              className="h-9 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+            >
+              {isRecommending ? "Finding match…" : "Submit"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── main page ────────────────────────────────────────────────────────────────
 
 const PatientDoctorDiscovery = () => {
@@ -263,9 +498,22 @@ const PatientDoctorDiscovery = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorListItem | null>(
     null,
   )
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
+  const [aiRevealOpen, setAiRevealOpen] = useState(false)
 
-  const { doctors, pagination, isLoading, error, fetchDoctors, clearError } =
-    useDoctorStore()
+  const {
+    doctors,
+    pagination,
+    isLoading,
+    error,
+    fetchDoctors,
+    clearError,
+    recommendedDoctor,
+    aiRecommendation,
+    clearAiRecommendation,
+  } = useDoctorStore()
+
+  const isAiFilterActive = recommendedDoctor !== null
 
   useEffect(() => {
     fetchDoctors(1, 10).catch(() => undefined)
@@ -278,8 +526,16 @@ const PatientDoctorDiscovery = () => {
     return ["All", ...unique]
   }, [doctors])
 
+  const sourceDoctors = useMemo(() => {
+    if (!isAiFilterActive || !recommendedDoctor) return doctors
+    const inList = doctors.some((d) => d.id === recommendedDoctor.id)
+    return inList
+      ? doctors.filter((d) => d.id === recommendedDoctor.id)
+      : [recommendedDoctor]
+  }, [doctors, isAiFilterActive, recommendedDoctor])
+
   const filtered = useMemo(() => {
-    return doctors.filter((doctor) => {
+    return sourceDoctors.filter((doctor) => {
       const query = search.toLowerCase()
       const matchesSearch =
         doctor.name.toLowerCase().includes(query) ||
@@ -288,11 +544,18 @@ const PatientDoctorDiscovery = () => {
         activeFilter === "All" || doctor.specialization === activeFilter
       return matchesSearch && matchesFilter
     })
-  }, [doctors, search, activeFilter])
+  }, [sourceDoctors, search, activeFilter])
 
   const handlePageChange = (page: number) => {
+    clearAiRecommendation()
     setSelectedDoctor(null)
     fetchDoctors(page, pagination?.limit ?? 10).catch(() => undefined)
+  }
+
+  const handleClearAiFilter = () => {
+    clearAiRecommendation()
+    setSelectedDoctor(null)
+    setAiRevealOpen(false)
   }
 
   return (
@@ -321,6 +584,14 @@ const PatientDoctorDiscovery = () => {
                 />
               </div>
               <Button
+                type="button"
+                onClick={() => setAiDialogOpen(true)}
+                className="h-9 shrink-0 gap-1.5 rounded-xl bg-indigo-500 px-3 text-sm font-medium text-white hover:bg-indigo-600"
+              >
+                <WandSparklesIcon className="size-4" />
+                AI Suggest
+              </Button>
+              <Button
                 variant="outline"
                 className="h-9 shrink-0 gap-1.5 rounded-xl border-slate-200 px-3 text-sm text-slate-600"
               >
@@ -331,7 +602,28 @@ const PatientDoctorDiscovery = () => {
             </div>
           </div>
 
-          {specializationFilters.length > 1 ? (
+          {isAiFilterActive && recommendedDoctor ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-indigo-900">
+                <WandSparklesIcon className="size-4 shrink-0 text-indigo-600" />
+                <span>
+                  Showing AI match:{" "}
+                  <span className="font-semibold">{recommendedDoctor.name}</span>
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleClearAiFilter}
+                className="h-8 shrink-0 rounded-lg border-indigo-200 bg-white text-xs text-indigo-700 hover:bg-indigo-50"
+              >
+                Show all doctors
+              </Button>
+            </div>
+          ) : null}
+
+          {specializationFilters.length > 1 && !isAiFilterActive ? (
             <div className="flex flex-wrap gap-2">
               {specializationFilters.map((tab) => (
                 <button
@@ -395,12 +687,15 @@ const PatientDoctorDiscovery = () => {
                     key={doctor.id}
                     doctor={doctor}
                     isSelected={selectedDoctor?.id === doctor.id}
+                    isAiMatch={
+                      isAiFilterActive && recommendedDoctor?.id === doctor.id
+                    }
                     onSelect={() => setSelectedDoctor(doctor)}
                   />
                 ))}
               </div>
 
-              {pagination && pagination.totalPages > 1 ? (
+              {pagination && pagination.totalPages > 1 && !isAiFilterActive ? (
                 <div className="flex items-center justify-between pt-2">
                   <p className="text-xs text-slate-500">
                     Page {pagination.page} of {pagination.totalPages} ·{" "}
@@ -454,6 +749,25 @@ const PatientDoctorDiscovery = () => {
           />
         ) : null}
       </div>
+
+      <AiRecommendationDialog
+        open={aiDialogOpen}
+        onOpenChange={(open) => {
+          setAiDialogOpen(open)
+          if (!open) useDoctorStore.getState().clearRecommendationError()
+        }}
+        onOpenReveal={() => setAiRevealOpen(true)}
+      />
+
+      {recommendedDoctor ? (
+        <AiRecommendationRevealDialog
+          open={aiRevealOpen}
+          onOpenChange={setAiRevealOpen}
+          doctor={recommendedDoctor}
+          aiMeta={aiRecommendation}
+          onViewDetails={() => setSelectedDoctor(recommendedDoctor)}
+        />
+      ) : null}
     </div>
   )
 }
