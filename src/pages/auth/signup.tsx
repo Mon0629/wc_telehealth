@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,15 +15,44 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-
+import useAuthStore from "@/store/authStore";
+import { toast } from "sonner";
 
 export default function Signup() {
-const navigate = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { signup, isLoading } = useAuthStore();
 
-const handleSignup = () => {
-  console.log("Signup button clicked");
-  navigate("/email-verification");
-};
+  const role = useMemo<"PATIENT" | "DOCTOR">(() => {
+    const sp = new URLSearchParams(location.search);
+    const r = sp.get("role")?.toLowerCase();
+    return r === "doctor" ? "DOCTOR" : "PATIENT";
+  }, [location.search]);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handleSignup = async () => {
+    try {
+      await signup({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        password,
+        confirm_password: confirmPassword,
+        role,
+      });
+      toast.success("Account created. Please verify your email.");
+      navigate("/email-verification");
+    } catch {
+      toast.error(
+        useAuthStore.getState().error ?? "Signup failed. Please try again."
+      );
+    }
+  };
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-white px-4 py-6 text-slate-900">
@@ -65,8 +95,9 @@ const handleSignup = () => {
                       id="firstName"
                       type="text"
                       placeholder="Juan"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
                       className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
- 
                     />
                   </Field>
                   <Field className="gap-3">
@@ -75,8 +106,9 @@ const handleSignup = () => {
                       id="lastName"
                       type="text"
                       placeholder="DelaCruz"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                       className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
-
                     />
                   </Field>
                 </div>
@@ -86,8 +118,9 @@ const handleSignup = () => {
                     id="email"
                     type="email"
                     placeholder="juandelacruz@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
-
                   />
                 </Field>
                 <Field className="gap-3">
@@ -96,6 +129,8 @@ const handleSignup = () => {
                     id="password"
                     type="password"
                     placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
                   />
                   <FieldDescription className="text-slate-500">
@@ -110,6 +145,8 @@ const handleSignup = () => {
                     id="confirm-password"
                     type="password"
                     placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
                   />
                 </Field>
@@ -117,13 +154,15 @@ const handleSignup = () => {
                   <Button
                     type="submit"
                     className="h-12 w-full rounded-full bg-sky-600 text-white shadow-sm hover:bg-sky-700 focus-visible:ring-sky-200/70"
+                    disabled={isLoading}
                   >
-                    Sign up
+                    {isLoading ? "Creating…" : "Sign up"}
                   </Button>
                   <Button
                     variant="outline"
                     type="button"
                     className="h-12 w-full rounded-full border-slate-200 bg-white/60 hover:bg-slate-50"
+                    disabled={isLoading}
                   >
                     Sign up with Google
                   </Button>

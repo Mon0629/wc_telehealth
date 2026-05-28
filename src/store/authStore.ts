@@ -27,6 +27,14 @@ interface AuthState {
 
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
+  signup: (payload: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+    confirm_password: string;
+    role: "PATIENT" | "DOCTOR";
+  }) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -91,6 +99,24 @@ const useAuthStore = create<AuthState & AuthActions>()(
               message;
           }
           set({ error: message, isLoading: false, isAuthenticated: false });
+          throw err;
+        }
+      },
+
+      signup: async (payload) => {
+        set({ isLoading: true, error: null });
+        try {
+          await api.post("/auth/register", payload);
+          set({ isLoading: false });
+        } catch (err) {
+          let message = "Signup failed. Please try again.";
+          if (axios.isAxiosError(err)) {
+            message =
+              err.response?.data?.message ??
+              err.response?.data?.error ??
+              message;
+          }
+          set({ error: message, isLoading: false });
           throw err;
         }
       },
