@@ -1,13 +1,503 @@
-import React from 'react'
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { format } from "date-fns"
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  StethoscopeIcon,
+  TagIcon,
+} from "lucide-react"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
+import useDoctorStore, { type DoctorListItem } from "@/store/doctorStore"
+
+type AppointmentStatus = "Pending" | "Confirmed" | "Completed" | "Cancelled"
+
+interface AppointmentRow {
+  id: string
+  doctorName: string
+  date: Date
+  roomLink: string | null
+  status: AppointmentStatus
+}
+
+const MOCK_APPOINTMENTS: AppointmentRow[] = [
+  {
+    id: "1",
+    doctorName: "Dr. Raymond Palomares",
+    date: new Date(2026, 5, 12),
+    roomLink: "https://meet.example.com/room-abc123",
+    status: "Confirmed",
+  },
+  {
+    id: "2",
+    doctorName: "Dr. Sarah Mitchell",
+    date: new Date(2026, 5, 18),
+    roomLink: null,
+    status: "Pending",
+  },
+]
+
+function StatusBadge({ status }: { status: AppointmentStatus }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+        status === "Confirmed" && "bg-emerald-100 text-emerald-700",
+        status === "Pending" && "bg-amber-100 text-amber-700",
+        status === "Completed" && "bg-sky-100 text-sky-700",
+        status === "Cancelled" && "bg-slate-100 text-slate-600",
+      )}
+    >
+      {status}
+    </span>
+  )
+}
+
+function formatFee(fee: string) {
+  const amount = Number(fee)
+  if (Number.isNaN(amount)) return fee
+  return `₱${amount.toLocaleString()}`
+}
+
+function getInitials(name: string) {
+  return name
+    .replace(/^Dr\.\s*/i, "")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function AppointmentDoctorCard({
+  doctor,
+  isSelected,
+  onSelect,
+}: {
+  doctor: DoctorListItem
+  isSelected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      className={cn(
+        "cursor-pointer gap-0 overflow-visible border-2 bg-white py-0 shadow-sm transition-[border-color,box-shadow] hover:shadow-md",
+        isSelected ? "border-sky-400" : "border-slate-200",
+      )}
+    >
+      <CardContent className="p-4">
+        <div className="flex gap-3">
+          <Avatar className="size-16 shrink-0 rounded-xl">
+            <AvatarImage
+              src={doctor.avatar}
+              alt={doctor.name}
+              className="rounded-xl object-cover"
+            />
+            <AvatarFallback className="rounded-xl bg-sky-100 font-semibold text-sky-700">
+              {getInitials(doctor.name)}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <p className="truncate text-sm font-semibold text-slate-800">
+              {doctor.name}
+            </p>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <StethoscopeIcon className="size-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">{doctor.specialization}</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <TagIcon className="size-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">
+                {formatFee(doctor.fee)}/appointment
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function AppointmentDoctorCardSkeleton() {
+  return (
+    <Card className="gap-0 border-2 border-slate-200 bg-white py-0">
+      <CardContent className="p-4">
+        <div className="flex gap-3">
+          <Skeleton className="size-16 shrink-0 rounded-xl" />
+          <div className="flex flex-1 flex-col justify-center gap-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-3 w-2/5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 const PatientAppointments = () => {
+  const [selectedDoctor, setSelectedDoctor] = useState<DoctorListItem | null>(
+    null,
+  )
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date(),
+  )
+  const [concern, setConcern] = useState("")
+  const [appointments, setAppointments] =
+    useState<AppointmentRow[]>(MOCK_APPOINTMENTS)
+  const [calendarCardHeight, setCalendarCardHeight] = useState<number>()
+  const calendarCardRef = useRef<HTMLDivElement>(null)
+
+  const { doctors, pagination, isLoading, error, fetchDoctors, clearError } =
+    useDoctorStore()
+
+  const todayStart = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
+
+  useEffect(() => {
+    fetchDoctors(1, 10).catch(() => undefined)
+  }, [fetchDoctors])
+
+  useLayoutEffect(() => {
+    const node = calendarCardRef.current
+    if (!node) return
+
+    const updateHeight = () => {
+      setCalendarCardHeight(node.getBoundingClientRect().height)
+    }
+
+    updateHeight()
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(node)
+    window.addEventListener("resize", updateHeight)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updateHeight)
+    }
+  }, [isLoading, selectedDate, doctors.length])
+
+  const handlePageChange = (page: number) => {
+    fetchDoctors(page, pagination?.limit ?? 10).catch(() => undefined)
+  }
+
+  const handleBookAppointment = () => {
+    if (!selectedDoctor || !selectedDate || !concern.trim()) return
+
+    setAppointments((prev) => [
+      {
+        id: crypto.randomUUID(),
+        doctorName: selectedDoctor.name,
+        date: selectedDate,
+        roomLink: null,
+        status: "Pending",
+      },
+      ...prev,
+    ])
+    setConcern("")
+  }
+
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex h-12 items-center gap-2 px-4">
+      <header className="flex h-12 items-center gap-2 border-b border-slate-100 px-4">
         <SidebarTrigger />
-        <span className="text-sm font-medium text-slate-700">My Appointments</span>
+        <span className="text-sm font-medium text-slate-700">
+          My Appointments
+        </span>
       </header>
+
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-5">
+        <div className="flex flex-col gap-6 xl:flex-row xl:gap-6">
+        {/* Left — doctors (single column) */}
+        <aside className="flex w-full shrink-0 flex-col gap-3 xl:w-[300px]">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">
+              Choose Doctor
+            </h2>
+          </div>
+
+          {error ? (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p>{error}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 h-7 px-2 text-red-700 hover:bg-red-100"
+                onClick={() => {
+                  clearError()
+                  fetchDoctors(
+                    pagination?.page ?? 1,
+                    pagination?.limit ?? 10,
+                  ).catch(() => undefined)
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : null}
+
+          <Card
+            className="flex flex-col gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm"
+            style={
+              calendarCardHeight
+                ? { height: `${calendarCardHeight}px` }
+                : undefined
+            }
+          >
+            <CardContent className="flex h-full min-h-0 flex-col p-3">
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <AppointmentDoctorCardSkeleton key={i} />
+                  ))
+                ) : doctors.length > 0 ? (
+                  doctors.map((doctor) => (
+                    <AppointmentDoctorCard
+                      key={doctor.id}
+                      doctor={doctor}
+                      isSelected={selectedDoctor?.id === doctor.id}
+                      onSelect={() => setSelectedDoctor(doctor)}
+                    />
+                  ))
+                ) : (
+                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center">
+                    <p className="text-sm text-slate-500">
+                      No doctors available
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {pagination && pagination.totalPages > 1 && !isLoading ? (
+                <div className="mt-3 flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                  <p className="text-xs text-slate-500">
+                    {pagination.page}/{pagination.totalPages}
+                  </p>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      disabled={!pagination.hasPrevPage}
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      className="rounded-lg"
+                    >
+                      <ChevronLeftIcon className="size-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      disabled={!pagination.hasNextPage}
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      className="rounded-lg"
+                    >
+                      <ChevronRightIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </aside>
+
+        {/* Middle — date */}
+        <section className="flex w-full shrink-0 flex-col gap-3 xl:w-[340px]">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Choose Date and time</h2>
+          </div>
+
+          <div ref={calendarCardRef} className="w-full">
+            <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+              <CardContent className="p-3">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={{ before: todayStart }}
+                  className="w-full rounded-xl [--cell-size:2.25rem]"
+                  classNames={{
+                    root: "w-full",
+                    month: "w-full",
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {selectedDate ? (
+            <p className="text-sm text-slate-600">
+              <span className="font-medium text-slate-800">Selected:</span>{" "}
+              {format(selectedDate, "EEEE, MMMM d, yyyy")}
+            </p>
+          ) : null}
+        </section>
+
+        {/* Right — patient concern */}
+        <section className="flex min-w-0 flex-1 flex-col gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">
+              Your concern
+            </h2>
+          </div>
+
+          <Card
+            className="flex flex-col gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm"
+            style={
+              calendarCardHeight
+                ? { height: `${calendarCardHeight}px` }
+                : undefined
+            }
+          >
+            <CardContent className="flex h-full flex-col gap-3 p-5">
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
+                <Label
+                  htmlFor="concern"
+                  className="shrink-0 text-sm font-semibold text-slate-900"
+                >
+                  Describe your concern or symptoms
+                </Label>
+                <Textarea
+                  id="concern"
+                  value={concern}
+                  onChange={(e) => setConcern(e.target.value)}
+                  placeholder="e.g. I've had a persistent cough and mild fever for 3 days..."
+                  className="min-h-0 flex-1 resize-none rounded-xl border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                />
+                <p className="shrink-0 text-xs text-slate-500">
+                  This will be shared with your doctor before the appointment.
+                </p>
+              </div>
+
+              {selectedDoctor ? (
+                <div className="shrink-0 rounded-xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-slate-600">
+                  <span className="font-medium text-slate-800">Doctor:</span>{" "}
+                  {selectedDoctor.name}
+                  {selectedDate ? (
+                    <>
+                      <br />
+                      <span className="font-medium text-slate-800">Date:</span>{" "}
+                      {format(selectedDate, "MMM d, yyyy")}
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <Button
+                type="button"
+                disabled={!selectedDoctor || !selectedDate || !concern.trim()}
+                onClick={handleBookAppointment}
+                className="h-10 w-full shrink-0 rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
+              >
+                Book appointment
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+        </div>
+
+        {/* Appointments table — full width */}
+        <section className="w-full min-w-0">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold text-slate-800">
+              My Appointments
+            </h2>
+          </div>
+
+          <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-100 hover:bg-transparent">
+                    <TableHead className="h-11 px-4 text-slate-600">
+                      Doctor
+                    </TableHead>
+                    <TableHead className="h-11 px-4 text-slate-600">
+                      Date
+                    </TableHead>
+                    <TableHead className="h-11 px-4 text-slate-600">
+                      Room Link
+                    </TableHead>
+                    <TableHead className="h-11 px-4 text-slate-600">
+                      Status
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {appointments.length > 0 ? (
+                    appointments.map((appointment) => (
+                      <TableRow
+                        key={appointment.id}
+                        className="border-slate-100"
+                      >
+                        <TableCell className="px-4 py-3 font-medium text-slate-800">
+                          {appointment.doctorName}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-slate-600">
+                          {format(appointment.date, "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          {appointment.roomLink ? (
+                            <a
+                              href={appointment.roomLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
+                            >
+                              Join room
+                            </a>
+                          ) : (
+                            <span className="text-sm text-slate-400">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <StatusBadge status={appointment.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={4}
+                        className="px-4 py-10 text-center text-sm text-slate-500"
+                      >
+                        No appointments yet. Book one above to get started.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </div>
   )
 }
