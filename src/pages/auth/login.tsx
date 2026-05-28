@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import useAuthStore from "@/store/authStore";
+import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -32,6 +33,9 @@ export default function Login() {
       const role = useAuthStore.getState().user?.role;
       navigate(role === "PATIENT" ? "/patient-dashboard" : "/doctor-dashboard");
     } catch {
+      const message =
+        useAuthStore.getState().error ?? "Invalid credentials. Please try again.";
+      toast.error(message);
     }
   };
 
@@ -61,11 +65,6 @@ export default function Login() {
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col px-8 pb-10">
-            {error && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {error}
-              </div>
-            )}
 
             <form className="flex flex-1 flex-col" onSubmit={handleLogin}>
               <FieldGroup className="flex flex-1 flex-col gap-8">

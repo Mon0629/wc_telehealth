@@ -83,7 +83,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
             isLoading: false,
           });
         } catch (err) {
-          let message = "Login failed. Please try again.";
+          let message = "Invalid credentials. Please try again.";
           if (axios.isAxiosError(err)) {
             message =
               err.response?.data?.message ??
