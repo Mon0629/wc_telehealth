@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react"
 import { format } from "date-fns"
 import {
   ChevronLeftIcon,
@@ -24,7 +31,11 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import useDoctorStore, { type DoctorListItem } from "@/store/doctorStore"
+import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
+import useDoctorStore, {
+  isDateOnDoctorAvailableDay,
+  type DoctorListItem,
+} from "@/store/doctorStore"
 
 type AppointmentStatus = "Pending" | "Confirmed" | "Completed" | "Cancelled"
 
@@ -83,6 +94,29 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase()
+}
+
+function getEndOfNextMonth(from: Date = new Date()) {
+  const end = new Date(from.getFullYear(), from.getMonth() + 2, 0)
+  end.setHours(0, 0, 0, 0)
+  return end
+}
+
+function isDateWithinBookingWindow(date: Date, todayStart: Date) {
+  const day = new Date(date)
+  day.setHours(0, 0, 0, 0)
+  if (day < todayStart) return false
+  return day <= getEndOfNextMonth()
+}
+
+function isMonthWithinBookingWindow(month: Date, from: Date = new Date()) {
+  const current = new Date(from.getFullYear(), from.getMonth(), 1)
+  const next = new Date(from.getFullYear(), from.getMonth() + 1, 1)
+  const viewed = new Date(month.getFullYear(), month.getMonth(), 1)
+  return (
+    viewed.getTime() === current.getTime() ||
+    viewed.getTime() === next.getTime()
+  )
 }
 
 function AppointmentDoctorCard({
@@ -168,6 +202,12 @@ const PatientAppointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date(),
   )
+  const [displayMonth, setDisplayMonth] = useState<Date>(() => {
+    const d = new Date()
+    d.setDate(1)
+    d.setHours(0, 0, 0, 0)
+    return d
+  })
   const [concern, setConcern] = useState("")
   const [appointments, setAppointments] =
     useState<AppointmentRow[]>(MOCK_APPOINTMENTS)
@@ -183,9 +223,47 @@ const PatientAppointments = () => {
     return d
   }, [])
 
+  const availableDaysOfWeek = selectedDoctor?.availableDaysOfWeek ?? []
+
+  const bookingWindowEnd = useMemo(() => getEndOfNextMonth(), [])
+
+  const calendarDisabled = useMemo(() => {
+    const matchers: Array<{ before: Date } | ((date: Date) => boolean)> = [
+      { before: todayStart },
+      (date) => {
+        const day = new Date(date)
+        day.setHours(0, 0, 0, 0)
+        return day > bookingWindowEnd
+      },
+    ]
+
+    if (selectedDoctor) {
+      matchers.push((date) => {
+        const day = new Date(date)
+        day.setHours(0, 0, 0, 0)
+        if (day < todayStart) return false
+        if (day > bookingWindowEnd) return false
+        return !isDateOnDoctorAvailableDay(date, availableDaysOfWeek)
+      })
+    }
+
+    return matchers
+  }, [todayStart, bookingWindowEnd, selectedDoctor, availableDaysOfWeek])
+
   useEffect(() => {
     fetchDoctors(1, 10).catch(() => undefined)
   }, [fetchDoctors])
+
+  useEffect(() => {
+    if (!selectedDate) return
+    if (
+      !isDateWithinBookingWindow(selectedDate, todayStart) ||
+      (selectedDoctor &&
+        !isDateOnDoctorAvailableDay(selectedDate, availableDaysOfWeek))
+    ) {
+      setSelectedDate(undefined)
+    }
+  }, [selectedDoctor, availableDaysOfWeek, selectedDate, todayStart])
 
   useLayoutEffect(() => {
     const node = calendarCardRef.current
@@ -209,6 +287,43 @@ const PatientAppointments = () => {
   const handlePageChange = (page: number) => {
     fetchDoctors(page, pagination?.limit ?? 10).catch(() => undefined)
   }
+
+  const calendarComponents = useMemo(
+    () => ({
+      Weekday: ({
+        className,
+        children,
+        ...props
+      }: ComponentProps<"th">) => {
+        const text = String(children ?? "").trim()
+        const matchedDay = DAYS_OF_WEEK.find((day) => {
+          const short = day.label.slice(0, 3).toLowerCase()
+          return (
+            short.startsWith(text.toLowerCase()) ||
+            text.toLowerCase().startsWith(short.slice(0, 2))
+          )
+        })
+        const isAvailable =
+          Boolean(selectedDoctor) &&
+          isMonthWithinBookingWindow(displayMonth) &&
+          Boolean(matchedDay) &&
+          availableDaysOfWeek.includes(matchedDay.apiNumber)
+
+        return (
+          <th
+            {...props}
+            className={cn(
+              className,
+              isAvailable && "font-semibold text-emerald-700",
+            )}
+          >
+            {children}
+          </th>
+        )
+      },
+    }),
+    [selectedDoctor, availableDaysOfWeek, displayMonth],
+  )
 
   const handleBookAppointment = () => {
     if (!selectedDoctor || !selectedDate || !concern.trim()) return
@@ -331,7 +446,10 @@ const PatientAppointments = () => {
         {/* Middle — date */}
         <section className="flex w-full shrink-0 flex-col gap-3 xl:w-[340px]">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">Choose Date and time</h2>
+            <h2 className="text-lg font-semibold text-slate-800">
+              Choose date
+            </h2>
+
           </div>
 
           <div ref={calendarCardRef} className="w-full">
@@ -339,9 +457,28 @@ const PatientAppointments = () => {
               <CardContent className="p-3">
                 <Calendar
                   mode="single"
+                  weekStartsOn={1}
+                  month={displayMonth}
+                  onMonthChange={setDisplayMonth}
                   selected={selectedDate}
                   onSelect={setSelectedDate}
-                  disabled={{ before: todayStart }}
+                  disabled={calendarDisabled}
+                  modifiers={{
+                    doctorAvailable: (date) => {
+                      if (!selectedDoctor) return false
+                      if (!isDateWithinBookingWindow(date, todayStart))
+                        return false
+                      return isDateOnDoctorAvailableDay(
+                        date,
+                        availableDaysOfWeek,
+                      )
+                    },
+                  }}
+                  modifiersClassNames={{
+                    doctorAvailable:
+                      "bg-emerald-50 font-medium text-emerald-900 [&_button]:font-semibold [&_button]:text-emerald-800 [&_button]:hover:bg-emerald-100",
+                  }}
+                  components={calendarComponents}
                   className="w-full rounded-xl [--cell-size:2.25rem]"
                   classNames={{
                     root: "w-full",
@@ -351,13 +488,6 @@ const PatientAppointments = () => {
               </CardContent>
             </Card>
           </div>
-
-          {selectedDate ? (
-            <p className="text-sm text-slate-600">
-              <span className="font-medium text-slate-800">Selected:</span>{" "}
-              {format(selectedDate, "EEEE, MMMM d, yyyy")}
-            </p>
-          ) : null}
         </section>
 
         {/* Right — patient concern */}
