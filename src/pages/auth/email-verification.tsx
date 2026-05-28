@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,17 +15,26 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import useAuthStore from "@/store/authStore";
+import { toast } from "sonner";
 
 const OTP_LENGTH = 6;
 
 export default function EmailVerification() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [otp, setOtp] = React.useState<string[]>(Array(OTP_LENGTH).fill(""));
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { verifyEmailOtp, isLoading, pendingVerificationEmail } =
+    useAuthStore();
   const inputsRef = React.useRef<Array<HTMLInputElement | null>>([]);
 
   const otpValue = otp.join("");
   const isComplete = otpValue.length === OTP_LENGTH && otp.every(Boolean);
+
+  const email = React.useMemo(() => {
+    const sp = new URLSearchParams(location.search);
+    return sp.get("email") ?? pendingVerificationEmail ?? "";
+  }, [location.search, pendingVerificationEmail]);
 
   const focusIndex = React.useCallback((idx: number) => {
     inputsRef.current[idx]?.focus();
@@ -86,7 +95,7 @@ export default function EmailVerification() {
     }
 
     // Optional: pressing Enter submits if complete.
-    if (e.key === "Enter" && isComplete && !isSubmitting) {
+    if (e.key === "Enter" && isComplete && !isLoading) {
       void handleVerify();
     }
   };
@@ -101,13 +110,21 @@ export default function EmailVerification() {
 
   const handleVerify = async () => {
     if (!isComplete) return;
-    setIsSubmitting(true);
     try {
-      // TODO: replace with real verification call.
-      await new Promise((r) => setTimeout(r, 600));
-      navigate("/login");
-    } finally {
-      setIsSubmitting(false);
+      if (!email) {
+        toast.error("Missing email for verification. Please sign up again.");
+        navigate("/signup");
+        return;
+      }
+
+      await verifyEmailOtp({ email, otp: otpValue });
+      toast.success("Account Created");
+      const role = useAuthStore.getState().user?.role;
+      navigate(role === "PATIENT" ? "/patient-dashboard" : "/doctor-dashboard");
+    } catch {
+      toast.error(
+        useAuthStore.getState().error ?? "Invalid code. Please try again."
+      );
     }
   };
 
@@ -193,10 +210,10 @@ export default function EmailVerification() {
                 <Field className="mt-auto gap-4">
                   <Button
                     type="submit"
-                    disabled={!isComplete || isSubmitting}
+                    disabled={!isComplete || isLoading}
                     className="h-12 w-full rounded-full bg-sky-600 text-white shadow-sm hover:bg-sky-700 focus-visible:ring-sky-200/70 disabled:opacity-60"
                   >
-                    {isSubmitting ? "Verifying..." : "Verify"}
+                    {isLoading ? "Verifying..." : "Verify"}
                   </Button>
 
                   <FieldDescription className="text-center">
