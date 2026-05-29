@@ -179,7 +179,7 @@ function TodayDateStripCard({
 function UpcomingAppointmentsTableSkeleton() {
   return (
     <>
-      {Array.from({ length: 3 }).map((_, i) => (
+      {Array.from({ length: 5 }).map((_, i) => (
         <TableRow key={i} className="border-zinc-200">
           <TableCell className="px-4 py-3" colSpan={5}>
             <Skeleton className="h-10 w-full" />
@@ -378,7 +378,7 @@ export default function PatientDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {upcomingAppointments.slice(0, 3).map((appointment) => (
+                          {upcomingAppointments.slice(0, 5).map((appointment) => (
                             <UpcomingAppointmentRow
                               key={appointment.id}
                               appointment={appointment}
