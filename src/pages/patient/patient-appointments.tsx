@@ -38,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { JoinRoomLink } from "@/components/video/JoinRoomLink"
 import { cn } from "@/lib/utils"
 import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
 import useAppointmentStore, {
@@ -742,18 +743,10 @@ const PatientAppointments = () => {
                           {format(appointment.date, "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="px-4 py-3">
-                          {appointment.roomLink ? (
-                            <a
-                              href={appointment.roomLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
-                            >
-                              Join room
-                            </a>
-                          ) : (
-                            <span className="text-sm text-slate-400">—</span>
-                          )}
+                          <JoinRoomLink
+                            appointmentId={Number(appointment.id)}
+                            canJoin={appointment.status === "Confirmed"}
+                          />
                         </TableCell>
                         <TableCell className="px-4 py-3">
                           <StatusBadge status={appointment.status} />
