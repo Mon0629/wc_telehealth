@@ -194,12 +194,14 @@ interface PrescriptionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   appointmentId: number
+  onSaved?: (appointmentId: number, items: PrescriptionItem[]) => void
 }
 
 export function PrescriptionDialog({
   open,
   onOpenChange,
   appointmentId,
+  onSaved,
 }: PrescriptionDialogProps) {
   const [items, setItems] = useState<PrescriptionItemRow[]>([
     createPrescriptionRow(),
@@ -250,11 +252,10 @@ export function PrescriptionDialog({
 
     setIsSubmitting(true)
     try {
-      await savePrescription(
-        appointmentId,
-        validItems.map(({ id: _id, ...rest }) => rest),
-      )
+      const savedItems = validItems.map(({ id: _id, ...rest }) => rest)
+      const formattedItems = await savePrescription(appointmentId, savedItems)
       toast.success("Prescription saved")
+      onSaved?.(appointmentId, formattedItems)
       onOpenChange(false)
     } catch (err) {
       const message = axios.isAxiosError(err)
@@ -268,7 +269,7 @@ export function PrescriptionDialog({
     } finally {
       setIsSubmitting(false)
     }
-  }, [appointmentId, items, onOpenChange])
+  }, [appointmentId, items, onOpenChange, onSaved])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
