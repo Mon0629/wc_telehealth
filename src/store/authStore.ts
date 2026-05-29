@@ -40,7 +40,7 @@ interface AuthActions {
     role: "PATIENT" | "DOCTOR";
   }) => Promise<void>;
   verifyEmailOtp: (payload: { email: string; otp: string }) => Promise<void>;
-  completeFirstLogin: () => void;
+  completeFirstLogin: () => Promise<void>;
   logout: () => void;
   clearError: () => void;
   setPendingVerificationEmail: (email: string | null) => void;
@@ -148,13 +148,15 @@ const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      completeFirstLogin: () =>
+      completeFirstLogin: async () => {
+        await api.post("/auth/complete-first-login");
         set((state) => ({
           isFirstLogin: false,
           user: state.user
             ? { ...state.user, firstTimeLoggedIn: false }
             : null,
-        })),
+        }));
+      },
 
       logout: () => {
         localStorage.removeItem("accessToken");
