@@ -1,10 +1,18 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +59,8 @@ export function NavUser({
   const navigate = useNavigate()
   const unreadCount = useNotificationStore((s) => s.unreadCount)
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount)
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const initials = getInitials(user.name) || user.email.slice(0, 2).toUpperCase()
 
@@ -66,12 +76,19 @@ export function NavUser({
     return () => window.removeEventListener("focus", onFocus)
   }, [fetchUnreadCount])
 
-  const handleLogout = () => {
-    logout()
-    navigate("/login")
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      setLogoutDialogOpen(false)
+      navigate("/login")
+    } finally {
+      setIsLoggingOut(false)
+    }
   }
 
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -133,7 +150,12 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault()
+                setLogoutDialogOpen(true)
+              }}
+            >
               <LogOutIcon />
               Log out
             </DropdownMenuItem>
@@ -141,5 +163,43 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+
+    <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+      <DialogContent
+        showCloseButton={false}
+        overlayClassName="bg-zinc-900/15 backdrop-blur-none"
+        className="max-w-sm gap-0 overflow-hidden rounded-lg border-zinc-200 p-0 shadow-lg sm:max-w-sm"
+      >
+        <DialogHeader className="space-y-1.5 border-0 px-5 pt-5 pb-0 pr-5">
+          <DialogTitle className="text-base font-semibold text-zinc-900">
+            Log out?
+          </DialogTitle>
+          <DialogDescription className="text-sm text-zinc-500">
+            You will need to sign in again to access your account.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col-reverse gap-2 px-5 pt-4 pb-5 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoggingOut}
+            onClick={() => setLogoutDialogOpen(false)}
+            className="h-9 rounded-lg border-zinc-200 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={isLoggingOut}
+            onClick={() => void handleConfirmLogout()}
+            className="h-9 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+          >
+            {isLoggingOut ? "Logging out…" : "Log out"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

@@ -5,6 +5,7 @@ import axios from "axios";
 import { parseAuthResponse } from "@/lib/auth-response";
 import { setAccessToken, setRefreshToken } from "@/lib/auth-token";
 import { disconnectSocket } from "@/lib/socket";
+import { clearBeams } from "@/lib/pusherBeams";
 
 export interface User {
   id: number;
@@ -43,7 +44,7 @@ interface AuthActions {
   }) => Promise<void>;
   verifyEmailOtp: (payload: { email: string; otp: string }) => Promise<void>;
   completeFirstLogin: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   setPendingVerificationEmail: (email: string | null) => void;
 }
@@ -159,7 +160,14 @@ const useAuthStore = create<AuthState & AuthActions>()(
         }));
       },
 
-      logout: () => {
+      logout: async () => {
+        try {
+          await api.post("/auth/logout");
+        } catch {
+          // Always clear local state even if the server request fails
+        }
+
+        clearBeams();
         disconnectSocket();
 
         setAccessToken(null);

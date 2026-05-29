@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { format, parseISO } from "date-fns"
-import { CheckIcon, Trash2Icon } from "lucide-react"
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -36,10 +36,12 @@ function formatAppointmentDate(date: string) {
   }
 }
 
+const APPOINTMENTS_PAGE_LIMIT = 10
+
 function AppointmentTableSkeleton() {
   return (
     <>
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: APPOINTMENTS_PAGE_LIMIT }).map((_, index) => (
         <TableRow key={index} className="border-zinc-200">
           <TableCell className="px-4 py-3">
             <Skeleton className="h-4 w-32" />
@@ -121,6 +123,9 @@ const DoctorAppointments = () => {
   const doctorAppointments = useAppointmentStore(
     (state) => state.doctorAppointments,
   )
+  const appointmentsMeta = useAppointmentStore(
+    (state) => state.appointmentsMeta,
+  )
   const isLoadingAppointments = useAppointmentStore(
     (state) => state.isLoadingAppointments,
   )
@@ -144,8 +149,12 @@ const DoctorAppointments = () => {
   )
 
   useEffect(() => {
-    fetchDoctorAppointments().catch(() => undefined)
+    fetchDoctorAppointments(1, APPOINTMENTS_PAGE_LIMIT).catch(() => undefined)
   }, [fetchDoctorAppointments])
+
+  const handlePageChange = (page: number) => {
+    fetchDoctorAppointments(page, APPOINTMENTS_PAGE_LIMIT).catch(() => undefined)
+  }
 
   const handleConfirm = async (appointmentId: number) => {
     try {
@@ -199,7 +208,10 @@ const DoctorAppointments = () => {
               className="mt-2 h-7 px-2 text-red-700 hover:bg-red-100"
               onClick={() => {
                 clearAppointmentsError()
-                fetchDoctorAppointments().catch(() => undefined)
+                fetchDoctorAppointments(
+                  appointmentsMeta?.page ?? 1,
+                  APPOINTMENTS_PAGE_LIMIT,
+                ).catch(() => undefined)
               }}
             >
               Retry
@@ -304,6 +316,46 @@ const DoctorAppointments = () => {
                 </Table>
               </CardContent>
             </Card>
+
+            {appointmentsMeta && appointmentsMeta.totalPages > 1 ? (
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <p className="text-xs text-zinc-500">
+                  Page {appointmentsMeta.page} of {appointmentsMeta.totalPages}{" "}
+                  · {appointmentsMeta.total} appointment
+                  {appointmentsMeta.total !== 1 ? "s" : ""}
+                </p>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={
+                      !appointmentsMeta.hasPrevPage || isLoadingAppointments
+                    }
+                    onClick={() =>
+                      handlePageChange(appointmentsMeta.page - 1)
+                    }
+                    className="rounded-lg"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeftIcon className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={
+                      !appointmentsMeta.hasNextPage || isLoadingAppointments
+                    }
+                    onClick={() =>
+                      handlePageChange(appointmentsMeta.page + 1)
+                    }
+                    className="rounded-lg"
+                    aria-label="Next page"
+                  >
+                    <ChevronRightIcon className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
