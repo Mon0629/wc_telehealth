@@ -6,7 +6,7 @@ import {
   useState,
   type ComponentProps,
 } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
 import {
   ChevronLeftIcon,
@@ -42,53 +42,64 @@ import { JoinRoomLink } from "@/components/video/JoinRoomLink"
 import { cn } from "@/lib/utils"
 import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
 import useAppointmentStore, {
+  formatTime24ToDisplay,
   getSlotsForDate,
+  type DoctorAppointmentStatus,
+  type PatientAppointmentItem,
 } from "@/store/appointmentStore"
 import useDoctorStore, {
   isDateOnDoctorAvailableDay,
   type DoctorListItem,
 } from "@/store/doctorStore"
 
-type AppointmentStatus = "Pending" | "Confirmed" | "Completed" | "Cancelled"
-
-interface AppointmentRow {
-  id: string
-  doctorName: string
-  date: Date
-  roomLink: string | null
-  status: AppointmentStatus
-}
-
-const MOCK_APPOINTMENTS: AppointmentRow[] = [
-  {
-    id: "1",
-    doctorName: "Dr. Raymond Palomares",
-    date: new Date(2026, 5, 12),
-    roomLink: "https://meet.example.com/room-abc123",
-    status: "Confirmed",
-  },
-  {
-    id: "2",
-    doctorName: "Dr. Sarah Mitchell",
-    date: new Date(2026, 5, 18),
-    roomLink: null,
-    status: "Pending",
-  },
-]
-
-function StatusBadge({ status }: { status: AppointmentStatus }) {
+function StatusBadge({ status }: { status: DoctorAppointmentStatus }) {
   return (
     <span
       className={cn(
         "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
         status === "Confirmed" && "bg-emerald-100 text-emerald-700",
         status === "Pending" && "bg-amber-100 text-amber-700",
+        status === "Denied" && "bg-red-100 text-red-700",
         status === "Completed" && "bg-sky-100 text-sky-700",
         status === "Cancelled" && "bg-slate-100 text-slate-600",
       )}
     >
       {status}
     </span>
+  )
+}
+
+function formatAppointmentDate(date: string) {
+  try {
+    return format(parseISO(date), "MMM d, yyyy")
+  } catch {
+    return date
+  }
+}
+
+function PatientAppointmentTableSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <TableRow key={index} className="border-slate-100">
+          <TableCell className="px-4 py-3">
+            <Skeleton className="h-4 w-32" />
+          </TableCell>
+          <TableCell className="px-4 py-3">
+            <Skeleton className="h-4 w-24" />
+          </TableCell>
+          <TableCell className="px-4 py-3">
+            <Skeleton className="h-4 w-16" />
+          </TableCell>
+          <TableCell className="px-4 py-3">
+            <Skeleton className="h-4 w-20" />
+          </TableCell>
+          <TableCell className="px-4 py-3">
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
   )
 }
 
@@ -234,8 +245,6 @@ const PatientAppointments = () => {
   const [concern, setConcern] = useState("")
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [slotsDialogOpen, setSlotsDialogOpen] = useState(false)
-  const [appointments, setAppointments] =
-    useState<AppointmentRow[]>(MOCK_APPOINTMENTS)
   const [calendarCardHeight, setCalendarCardHeight] = useState<number>()
   const calendarCardRef = useRef<HTMLDivElement>(null)
 
@@ -249,6 +258,24 @@ const PatientAppointments = () => {
   const weekSlots = useAppointmentStore((state) => state.weekSlots)
   const isLoadingSlots = useAppointmentStore((state) => state.isLoadingSlots)
   const slotsError = useAppointmentStore((state) => state.slotsError)
+  const patientAppointments = useAppointmentStore(
+    (state) => state.patientAppointments,
+  )
+  const patientAppointmentsMeta = useAppointmentStore(
+    (state) => state.patientAppointmentsMeta,
+  )
+  const isLoadingPatientAppointments = useAppointmentStore(
+    (state) => state.isLoadingPatientAppointments,
+  )
+  const patientAppointmentsError = useAppointmentStore(
+    (state) => state.patientAppointmentsError,
+  )
+  const fetchPatientAppointments = useAppointmentStore(
+    (state) => state.fetchPatientAppointments,
+  )
+  const clearPatientAppointmentsError = useAppointmentStore(
+    (state) => state.clearPatientAppointmentsError,
+  )
 
   const todayStart = useMemo(() => {
     const d = new Date()
@@ -300,6 +327,10 @@ const PatientAppointments = () => {
   useEffect(() => {
     fetchDoctors(1, 10).catch(() => undefined)
   }, [fetchDoctors])
+
+  useEffect(() => {
+    fetchPatientAppointments(1).catch(() => undefined)
+  }, [fetchPatientAppointments])
 
   useEffect(() => {
     if (!selectedDate) return
@@ -362,8 +393,12 @@ const PatientAppointments = () => {
     }
   }, [isLoading, selectedDate, doctors.length])
 
-  const handlePageChange = (page: number) => {
+  const handleDoctorPageChange = (page: number) => {
     fetchDoctors(page, pagination?.limit ?? 10).catch(() => undefined)
+  }
+
+  const handleAppointmentsPageChange = (page: number) => {
+    fetchPatientAppointments(page).catch(() => undefined)
   }
 
   const calendarComponents = useMemo(
@@ -442,22 +477,11 @@ const PatientAppointments = () => {
         patient_notes: concern.trim(),
       })
 
-      toast.success("Appointment Success")
+      toast.success("Appointment booked successfully")
 
-      const [hours, minutes] = selectedTime.split(":").map(Number)
-      const appointmentDateTime = new Date(selectedDate)
-      appointmentDateTime.setHours(hours, minutes ?? 0, 0, 0)
-
-      setAppointments((prev) => [
-        {
-          id: crypto.randomUUID(),
-          doctorName: selectedDoctor.name,
-          date: appointmentDateTime,
-          roomLink: null,
-          status: "Pending",
-        },
-        ...prev,
-      ])
+      await fetchPatientAppointments(
+        patientAppointmentsMeta?.page ?? 1,
+      )
 
       setSelectedDoctor(null)
       setSelectedDate(undefined)
@@ -558,7 +582,7 @@ const PatientAppointments = () => {
                       variant="outline"
                       size="icon-sm"
                       disabled={!pagination.hasPrevPage}
-                      onClick={() => handlePageChange(pagination.page - 1)}
+                      onClick={() => handleDoctorPageChange(pagination.page - 1)}
                       className="rounded-lg"
                     >
                       <ChevronLeftIcon className="size-4" />
@@ -567,7 +591,7 @@ const PatientAppointments = () => {
                       variant="outline"
                       size="icon-sm"
                       disabled={!pagination.hasNextPage}
-                      onClick={() => handlePageChange(pagination.page + 1)}
+                      onClick={() => handleDoctorPageChange(pagination.page + 1)}
                       className="rounded-lg"
                     >
                       <ChevronRightIcon className="size-4" />
@@ -710,6 +734,25 @@ const PatientAppointments = () => {
             </h2>
           </div>
 
+          {patientAppointmentsError ? (
+            <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p>{patientAppointmentsError}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 h-7 px-2 text-red-700 hover:bg-red-100"
+                onClick={() => {
+                  clearPatientAppointmentsError()
+                  fetchPatientAppointments(
+                    patientAppointmentsMeta?.page ?? 1,
+                  ).catch(() => undefined)
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : null}
+
           <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
             <CardContent className="p-0">
               <Table>
@@ -722,7 +765,10 @@ const PatientAppointments = () => {
                       Date
                     </TableHead>
                     <TableHead className="h-11 px-4 text-slate-600">
-                      Room Link
+                      Time
+                    </TableHead>
+                    <TableHead className="h-11 px-4 text-slate-600">
+                      Room
                     </TableHead>
                     <TableHead className="h-11 px-4 text-slate-600">
                       Status
@@ -730,33 +776,40 @@ const PatientAppointments = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {appointments.length > 0 ? (
-                    appointments.map((appointment) => (
-                      <TableRow
-                        key={appointment.id}
-                        className="border-slate-100"
-                      >
-                        <TableCell className="px-4 py-3 font-medium text-slate-800">
-                          {appointment.doctorName}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-slate-600">
-                          {format(appointment.date, "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <JoinRoomLink
-                            appointmentId={Number(appointment.id)}
-                            canJoin={appointment.status === "Confirmed"}
-                          />
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <StatusBadge status={appointment.status} />
-                        </TableCell>
-                      </TableRow>
-                    ))
+                  {isLoadingPatientAppointments ? (
+                    <PatientAppointmentTableSkeleton />
+                  ) : patientAppointments.length > 0 ? (
+                    patientAppointments.map(
+                      (appointment: PatientAppointmentItem) => (
+                        <TableRow
+                          key={appointment.id}
+                          className="border-slate-100"
+                        >
+                          <TableCell className="px-4 py-3 font-medium text-slate-800">
+                            {appointment.doctorName}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-slate-600">
+                            {formatAppointmentDate(appointment.appointmentDate)}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-slate-600">
+                            {formatTime24ToDisplay(appointment.startTime)}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <JoinRoomLink
+                              appointmentId={appointment.id}
+                              canJoin={appointment.status === "Confirmed"}
+                            />
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <StatusBadge status={appointment.status} />
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )
                   ) : (
                     <TableRow className="hover:bg-transparent">
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-10 text-center text-sm text-slate-500"
                       >
                         No appointments yet. Book one above to get started.
@@ -767,6 +820,45 @@ const PatientAppointments = () => {
               </Table>
             </CardContent>
           </Card>
+
+          {patientAppointmentsMeta &&
+          patientAppointmentsMeta.totalPages > 1 &&
+          !isLoadingPatientAppointments ? (
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-xs text-slate-500">
+                Page {patientAppointmentsMeta.page} of{" "}
+                {patientAppointmentsMeta.totalPages}
+              </p>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={!patientAppointmentsMeta.hasPrevPage}
+                  onClick={() =>
+                    handleAppointmentsPageChange(
+                      patientAppointmentsMeta.page - 1,
+                    )
+                  }
+                  className="rounded-lg"
+                >
+                  <ChevronLeftIcon className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={!patientAppointmentsMeta.hasNextPage}
+                  onClick={() =>
+                    handleAppointmentsPageChange(
+                      patientAppointmentsMeta.page + 1,
+                    )
+                  }
+                  className="rounded-lg"
+                >
+                  <ChevronRightIcon className="size-4" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
 

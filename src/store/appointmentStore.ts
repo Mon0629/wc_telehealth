@@ -47,6 +47,12 @@ export interface DoctorAppointmentPatientProfile {
   user: DoctorAppointmentUser
 }
 
+export interface DoctorAppointmentDoctorProfile {
+  id: number
+  specialization?: string
+  user: DoctorAppointmentUser
+}
+
 export interface DoctorAppointmentApiItem {
   id: number
   doctor_profile_id?: number
@@ -61,7 +67,12 @@ export interface DoctorAppointmentApiItem {
   room_link?: string | null
   meeting_link?: string | null
   patientProfile?: DoctorAppointmentPatientProfile
+  doctorProfile?: DoctorAppointmentDoctorProfile
   patient?: {
+    first_name?: string
+    last_name?: string
+  }
+  doctor?: {
     first_name?: string
     last_name?: string
   }
@@ -87,6 +98,16 @@ export interface DoctorAppointmentItem {
   id: number
   patientName: string
   patientNotes: string
+  appointmentDate: string
+  startTime: string
+  roomLink: string | null
+  videoRoomId: string | null
+  status: DoctorAppointmentStatus
+}
+
+export interface PatientAppointmentItem {
+  id: number
+  doctorName: string
   appointmentDate: string
   startTime: string
   roomLink: string | null
@@ -145,6 +166,24 @@ function resolvePatientName(item: DoctorAppointmentApiItem): string {
   return name || "Unknown patient"
 }
 
+function resolveDoctorName(item: DoctorAppointmentApiItem): string {
+  const profileUser = item.doctorProfile?.user
+  if (profileUser) {
+    const name =
+      `${profileUser.first_name ?? ""} ${profileUser.last_name ?? ""}`.trim()
+    if (name) return `Dr. ${name}`
+  }
+
+  if (item.doctor) {
+    const name =
+      `${item.doctor.first_name ?? ""} ${item.doctor.last_name ?? ""}`.trim()
+    if (name) return `Dr. ${name}`
+  }
+
+  const name = `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim()
+  return name ? `Dr. ${name}` : "Unknown doctor"
+}
+
 function resolveRoomLink(item: DoctorAppointmentApiItem): string | null {
   return (
     item.daily_room_url ?? item.room_link ?? item.meeting_link ?? null
@@ -158,6 +197,20 @@ export function normalizeDoctorAppointment(
     id: item.id,
     patientName: resolvePatientName(item),
     patientNotes: item.patient_notes?.trim() ?? "",
+    appointmentDate: item.appointment_date,
+    startTime: item.start_time,
+    roomLink: resolveRoomLink(item),
+    videoRoomId: item.video_room_id ?? null,
+    status: normalizeAppointmentStatus(item.status),
+  }
+}
+
+export function normalizePatientAppointment(
+  item: DoctorAppointmentApiItem,
+): PatientAppointmentItem {
+  return {
+    id: item.id,
+    doctorName: resolveDoctorName(item),
     appointmentDate: item.appointment_date,
     startTime: item.start_time,
     roomLink: resolveRoomLink(item),
@@ -202,6 +255,10 @@ interface AppointmentStoreState {
   appointmentsMeta: AppointmentsListMeta | null
   isLoadingAppointments: boolean
   appointmentsError: string | null
+  patientAppointments: PatientAppointmentItem[]
+  patientAppointmentsMeta: AppointmentsListMeta | null
+  isLoadingPatientAppointments: boolean
+  patientAppointmentsError: string | null
   updatingAppointmentId: number | null
 }
 
@@ -212,12 +269,14 @@ interface AppointmentStoreActions {
   ) => Promise<WeekSlotsResponse>
   createAppointment: (payload: CreateAppointmentPayload) => Promise<void>
   fetchDoctorAppointments: (page?: number) => Promise<DoctorAppointmentItem[]>
+  fetchPatientAppointments: (page?: number) => Promise<PatientAppointmentItem[]>
   confirmAppointment: (appointmentId: number) => Promise<void>
   rejectAppointment: (appointmentId: number) => Promise<void>
   clearWeekSlots: () => void
   clearSlotsError: () => void
   clearBookingError: () => void
   clearAppointmentsError: () => void
+  clearPatientAppointmentsError: () => void
 }
 
 const useAppointmentStore = create<
@@ -232,10 +291,15 @@ const useAppointmentStore = create<
   appointmentsMeta: null,
   isLoadingAppointments: false,
   appointmentsError: null,
+  patientAppointments: [],
+  patientAppointmentsMeta: null,
+  isLoadingPatientAppointments: false,
+  patientAppointmentsError: null,
   updatingAppointmentId: null,
 
   clearBookingError: () => set({ bookingError: null }),
   clearAppointmentsError: () => set({ appointmentsError: null }),
+  clearPatientAppointmentsError: () => set({ patientAppointmentsError: null }),
 
   clearWeekSlots: () =>
     set((state) => {
@@ -306,6 +370,36 @@ const useAppointmentStore = create<
     } catch (err) {
       const message = getErrorMessage(err, "Failed to load appointments")
       set({ appointmentsError: message, isLoadingAppointments: false })
+      throw err
+    }
+  },
+
+  fetchPatientAppointments: async (page = 1) => {
+    set({ isLoadingPatientAppointments: true, patientAppointmentsError: null })
+    try {
+      const { data } = await api.get<
+        DoctorAppointmentsApiResponse | DoctorAppointmentApiItem[]
+      >("/appointments", {
+        params: { page, limit: 10 },
+      })
+
+      const items = extractAppointmentsFromResponse(data)
+      const patientAppointments = items.map(normalizePatientAppointment)
+      const patientAppointmentsMeta =
+        !Array.isArray(data) && data.meta ? data.meta : null
+
+      set({
+        patientAppointments,
+        patientAppointmentsMeta,
+        isLoadingPatientAppointments: false,
+      })
+      return patientAppointments
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to load appointments")
+      set({
+        patientAppointmentsError: message,
+        isLoadingPatientAppointments: false,
+      })
       throw err
     }
   },

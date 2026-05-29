@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { WeeklyAvailabilitySchedule } from "@/components/doctor/WeeklyAvailabilitySchedule"
 import { JoinRoomLink } from "@/components/video/JoinRoomLink"
 import { cn } from "@/lib/utils"
 import useAppointmentStore, {
@@ -206,95 +207,105 @@ const DoctorAppointments = () => {
           </div>
         ) : null}
 
-        <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-100 hover:bg-transparent">
-                  <TableHead className="h-11 px-4 text-slate-600">
-                    Patient
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-slate-600">
-                    Date
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-slate-600">
-                    Start time
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-slate-600">
-                    Room Link
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-slate-600">
-                    Status
-                  </TableHead>
-                  <TableHead className="h-11 px-4 text-slate-600">
-                    Action
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingAppointments ? (
-                  <AppointmentTableSkeleton />
-                ) : hasAppointments ? (
-                  doctorAppointments.map((appointment) => {
-                    const isUpdating =
-                      updatingAppointmentId === appointment.id
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <section className="w-full min-w-0 shrink-0 lg:w-1/3">
+            <WeeklyAvailabilitySchedule />
+          </section>
 
-                    return (
-                      <TableRow
-                        key={appointment.id}
-                        className="border-slate-100"
-                      >
-                        <TableCell className="px-4 py-3 font-medium text-slate-800">
-                          {appointment.patientName}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-slate-600">
-                          {formatAppointmentDate(appointment.appointmentDate)}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-slate-600">
-                          {formatTime24ToDisplay(appointment.startTime)}
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <JoinRoomLink
-                            appointmentId={appointment.id}
-                            canJoin={appointment.status === "Confirmed"}
-                          />
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <StatusBadge status={appointment.status} />
-                        </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <AppointmentActions
-                            appointment={appointment}
-                            isUpdating={isUpdating}
-                            onConfirm={() => {
-                              handleConfirm(appointment.id).catch(
-                                () => undefined,
-                              )
-                            }}
-                            onDeny={() => {
-                              handleReject(appointment.id).catch(
-                                () => undefined,
-                              )
-                            }}
-                          />
+          <section className="w-full min-w-0 lg:w-2/3">
+            <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-100 hover:bg-transparent">
+                      <TableHead className="h-11 px-4 text-slate-600">
+                        Patient
+                      </TableHead>
+                      <TableHead className="h-11 px-4 text-slate-600">
+                        Date
+                      </TableHead>
+                      <TableHead className="h-11 px-4 text-slate-600">
+                        Start time
+                      </TableHead>
+                      <TableHead className="h-11 px-4 text-slate-600">
+                        Room Link
+                      </TableHead>
+                      <TableHead className="h-11 px-4 text-slate-600">
+                        Status
+                      </TableHead>
+                      <TableHead className="h-11 px-4 text-slate-600">
+                        Action
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoadingAppointments ? (
+                      <AppointmentTableSkeleton />
+                    ) : hasAppointments ? (
+                      doctorAppointments.map((appointment) => {
+                        const isUpdating =
+                          updatingAppointmentId === appointment.id
+
+                        return (
+                          <TableRow
+                            key={appointment.id}
+                            className="border-slate-100"
+                          >
+                            <TableCell className="px-4 py-3 font-medium text-slate-800">
+                              {appointment.patientName}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-slate-600">
+                              {formatAppointmentDate(
+                                appointment.appointmentDate,
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-slate-600">
+                              {formatTime24ToDisplay(appointment.startTime)}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <JoinRoomLink
+                                appointmentId={appointment.id}
+                                canJoin={appointment.status === "Confirmed"}
+                              />
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <StatusBadge status={appointment.status} />
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <AppointmentActions
+                                appointment={appointment}
+                                isUpdating={isUpdating}
+                                onConfirm={() => {
+                                  handleConfirm(appointment.id).catch(
+                                    () => undefined,
+                                  )
+                                }}
+                                onDeny={() => {
+                                  handleReject(appointment.id).catch(
+                                    () => undefined,
+                                  )
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    ) : (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell
+                          colSpan={6}
+                          className="px-4 py-10 text-center text-sm text-slate-500"
+                        >
+                          No appointments.
                         </TableCell>
                       </TableRow>
-                    )
-                  })
-                ) : (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-sm text-slate-500"
-                    >
-                      No appointments.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
       </div>
     </div>
   )
