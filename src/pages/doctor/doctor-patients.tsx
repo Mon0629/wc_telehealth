@@ -79,6 +79,20 @@ function hasPrescription(items: PrescriptionItem[] | null) {
   return Boolean(items?.some((item) => item.medicine_name.trim()))
 }
 
+function summaryFromStorage(appointmentId: number): AppointmentRecordSummary {
+  const notes = parseStoredConsultationNotes(
+    localStorage.getItem(consultationNotesStorageKey(appointmentId)),
+  )
+  const storedPrescription = parseStoredPrescription(
+    localStorage.getItem(prescriptionStorageKey(appointmentId)),
+  )
+
+  return {
+    notes,
+    prescription: hasPrescription(storedPrescription) ? storedPrescription : null,
+  }
+}
+
 function shouldShowAddPrescription(
   status: DoctorAppointmentStatus,
   summary: AppointmentRecordSummary | undefined,
@@ -91,11 +105,13 @@ function shouldShowAddPrescription(
 }
 
 function getNotesCellAction(
+  appointment: DoctorAppointmentItem,
   summary: AppointmentRecordSummary | undefined,
-  isLoading: boolean,
 ) {
-  if (isLoading) return { label: "Loading…", clickable: false as const }
   if (hasConsultationNotes(summary?.notes ?? null)) {
+    return { label: "View notes", clickable: true as const }
+  }
+  if (appointment.status === "Completed") {
     return { label: "View notes", clickable: true as const }
   }
   return { label: "—", clickable: false as const }
@@ -104,10 +120,7 @@ function getNotesCellAction(
 function getPrescriptionCellAction(
   appointment: DoctorAppointmentItem,
   summary: AppointmentRecordSummary | undefined,
-  isLoading: boolean,
 ) {
-  if (isLoading) return { label: "Loading…", clickable: false as const, mode: "none" as const }
-
   if (shouldShowAddPrescription(appointment.status, summary)) {
     return {
       label: "Add Prescription",
@@ -119,6 +132,17 @@ function getPrescriptionCellAction(
   if (hasPrescription(summary?.prescription ?? null)) {
     return {
       label: "View Prescription",
+      clickable: true as const,
+      mode: "view" as const,
+    }
+  }
+
+  if (
+    appointment.status === "Completed" &&
+    hasConsultationNotes(summary?.notes ?? null)
+  ) {
+    return {
+      label: "View prescription",
       clickable: true as const,
       mode: "view" as const,
     }
@@ -230,9 +254,11 @@ function DetailPanelShell({
 function ConsultationNotesDetailPanel({
   selection,
   onClose,
+  onSummaryChange,
 }: {
   selection: PanelSelection
   onClose: () => void
+  onSummaryChange?: (notes: ConsultationNotesForm | null) => void
 }) {
   const [notes, setNotes] = useState<ConsultationNotesForm | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -254,10 +280,13 @@ function ConsultationNotesDetailPanel({
       try {
         const fetched = await fetchConsultationNotes(selection.appointmentId)
         if (cancelled) return
-        setNotes(fetched ?? stored)
+        const resolved = fetched ?? stored
+        setNotes(resolved)
+        onSummaryChange?.(resolved)
       } catch {
         if (cancelled) return
         setNotes(stored)
+        onSummaryChange?.(stored)
         setError("Could not load consultation notes from the server.")
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -269,7 +298,7 @@ function ConsultationNotesDetailPanel({
     return () => {
       cancelled = true
     }
-  }, [selection.appointmentId])
+  }, [selection.appointmentId, onSummaryChange])
 
   const fields: Array<{ key: keyof ConsultationNotesForm; label: string }> = [
     { key: "chief_complaint", label: "Chief complaint" },
@@ -322,9 +351,11 @@ function ConsultationNotesDetailPanel({
 function PrescriptionDetailPanel({
   selection,
   onClose,
+  onSummaryChange,
 }: {
   selection: PanelSelection
   onClose: () => void
+  onSummaryChange?: (prescription: PrescriptionItem[] | null) => void
 }) {
   const [items, setItems] = useState<PrescriptionItem[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -337,13 +368,24 @@ function PrescriptionDetailPanel({
       setIsLoading(true)
       setError(null)
 
+      const stored = parseStoredPrescription(
+        localStorage.getItem(prescriptionStorageKey(selection.appointmentId)),
+      )
+
       try {
         const fetched = await fetchPrescription(selection.appointmentId)
         if (cancelled) return
-        setItems(fetched)
+        const resolved = fetched ?? stored
+        setItems(resolved)
+        onSummaryChange?.(
+          hasPrescription(resolved) ? resolved : null,
+        )
       } catch {
         if (cancelled) return
-        setItems(null)
+        setItems(stored)
+        onSummaryChange?.(
+          hasPrescription(stored) ? stored : null,
+        )
         setError("Could not load prescription from the server.")
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -355,7 +397,7 @@ function PrescriptionDetailPanel({
     return () => {
       cancelled = true
     }
-  }, [selection.appointmentId])
+  }, [selection.appointmentId, onSummaryChange])
 
   return (
     <DetailPanelShell
@@ -455,63 +497,23 @@ const DoctorPatients = () => {
   const [summaries, setSummaries] = useState<
     Record<number, AppointmentRecordSummary>
   >({})
-  const [isLoadingSummaries, setIsLoadingSummaries] = useState(false)
 
   useEffect(() => {
     fetchDoctorAppointments().catch(() => undefined)
   }, [fetchDoctorAppointments])
 
-  const fetchAppointmentSummary = useCallback(
-    async (appointmentId: number): Promise<AppointmentRecordSummary> => {
-      const stored = parseStoredConsultationNotes(
-        localStorage.getItem(consultationNotesStorageKey(appointmentId)),
-      )
+  useEffect(() => {
+    if (isLoadingAppointments) return
 
-      const storedPrescription = parseStoredPrescription(
-        localStorage.getItem(prescriptionStorageKey(appointmentId)),
-      )
-
-      const [notes, prescription] = await Promise.all([
-        fetchConsultationNotes(appointmentId).catch(() => null),
-        fetchPrescription(appointmentId).catch(() => storedPrescription),
-      ])
-
-      const resolvedPrescription = prescription ?? storedPrescription
-
-      return {
-        notes: notes ?? stored,
-        prescription: hasPrescription(resolvedPrescription)
-          ? resolvedPrescription
-          : null,
-      }
-    },
-    [],
-  )
-
-  const loadSummaries = useCallback(
-    async (appointments: DoctorAppointmentItem[]) => {
-      if (!appointments.length) {
-        setSummaries({})
-        return
-      }
-
-      setIsLoadingSummaries(true)
-
-      try {
-        const entries = await Promise.all(
-          appointments.map(async (appointment) => {
-            const summary = await fetchAppointmentSummary(appointment.id)
-            return [appointment.id, summary] as const
-          }),
-        )
-
-        setSummaries(Object.fromEntries(entries))
-      } finally {
-        setIsLoadingSummaries(false)
-      }
-    },
-    [fetchAppointmentSummary],
-  )
+    setSummaries(
+      Object.fromEntries(
+        doctorAppointments.map((appointment) => [
+          appointment.id,
+          summaryFromStorage(appointment.id),
+        ]),
+      ),
+    )
+  }, [doctorAppointments, isLoadingAppointments])
 
   const applyPrescriptionToSummary = useCallback(
     (appointmentId: number, items: PrescriptionItem[]) => {
@@ -534,10 +536,24 @@ const DoctorPatients = () => {
     [applyPrescriptionToSummary],
   )
 
-  useEffect(() => {
-    if (isLoadingAppointments) return
-    loadSummaries(doctorAppointments).catch(() => undefined)
-  }, [doctorAppointments, isLoadingAppointments, loadSummaries])
+  const updateSummary = useCallback(
+    (
+      appointmentId: number,
+      partial: Partial<AppointmentRecordSummary>,
+    ) => {
+      setSummaries((prev) => ({
+        ...prev,
+        [appointmentId]: {
+          notes: partial.notes ?? prev[appointmentId]?.notes ?? null,
+          prescription:
+            partial.prescription !== undefined
+              ? partial.prescription
+              : (prev[appointmentId]?.prescription ?? null),
+        },
+      }))
+    },
+    [],
+  )
 
   const openPanel = (
     appointment: DoctorAppointmentItem,
@@ -631,14 +647,10 @@ const DoctorPatients = () => {
                   ) : hasPatients ? (
                     doctorAppointments.map((appointment) => {
                       const summary = summaries[appointment.id]
-                      const notesAction = getNotesCellAction(
-                        summary,
-                        isLoadingSummaries,
-                      )
+                      const notesAction = getNotesCellAction(appointment, summary)
                       const prescriptionAction = getPrescriptionCellAction(
                         appointment,
                         summary,
-                        isLoadingSummaries,
                       )
 
                       const notesActive =
@@ -759,12 +771,18 @@ const DoctorPatients = () => {
               key={panelKey}
               selection={panelSelection}
               onClose={() => setPanelSelection(null)}
+              onSummaryChange={(notes) =>
+                updateSummary(panelSelection.appointmentId, { notes })
+              }
             />
           ) : (
             <PrescriptionDetailPanel
               key={panelKey}
               selection={panelSelection}
               onClose={() => setPanelSelection(null)}
+              onSummaryChange={(prescription) =>
+                updateSummary(panelSelection.appointmentId, { prescription })
+              }
             />
           )
         ) : null}

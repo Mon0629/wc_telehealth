@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { getAccessToken, syncTokensFromPersistedAuth } from '@/lib/auth-token';
 import { resolveNotificationPath } from '@/lib/notification-routes';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
+import { initBeams } from '@/lib/pusherBeams';
+import { showOsNotification } from '@/lib/osNotification';
 import type { AppNotification } from '@/types/notifications';
 import useAuthStore from '@/store/authStore';
 import useNotificationStore from '@/store/notificationStore';
@@ -40,6 +42,15 @@ export function useSocketNotifications() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!authHydrated || !isAuthenticated || !accessToken || !user?.id) return;
+
+    const token = getAccessToken() ?? accessToken;
+    if (!token) return;
+
+    initBeams(token, user.id);
+  }, [authHydrated, isAuthenticated, accessToken, user?.id]);
+
+  useEffect(() => {
     if (!authHydrated || !isAuthenticated || !accessToken) return;
 
     const token = getAccessToken() ?? accessToken;
@@ -51,15 +62,25 @@ export function useSocketNotifications() {
       addNotification(payload);
       const path = resolveNotificationPath(payload.type, user?.role);
 
-      toast.info(payload.title, {
-        description: payload.body,
-        ...(path && {
-          action: {
-            label: 'View',
-            onClick: () => navigate(path),
-          },
-        }),
-      });
+      // OS notification (tray) whenever permission is granted
+      showOsNotification(payload.title, payload.body, {
+        type: payload.type,
+        role: user?.role,
+        tag: `notification-${payload.id}`,
+      }).catch(() => undefined);
+
+      // In-app toast when the user is actively on this tab
+      if (document.visibilityState === 'visible') {
+        toast.info(payload.title, {
+          description: payload.body,
+          ...(path && {
+            action: {
+              label: 'View',
+              onClick: () => navigate(path),
+            },
+          }),
+        });
+      }
     };
 
     socket.on('notification:new', onNotification);
