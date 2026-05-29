@@ -10,10 +10,12 @@ import { useLocation } from "react-router"
 import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
 import {
+  CalendarClockIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   StethoscopeIcon,
   TagIcon,
+  XIcon,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,6 +33,11 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   Table,
   TableBody,
   TableCell,
@@ -39,11 +46,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { AppointmentStatusBadge } from "@/components/appointments/AppointmentStatusBadge"
+import { RescheduleAppointmentDialog } from "@/components/appointments/RescheduleAppointmentDialog"
 import { JoinRoomLink } from "@/components/video/JoinRoomLink"
-import { cn } from "@/lib/utils"
+import {
+  formatAppointmentSlotLabel,
+  getEndOfNextMonth,
+  isDateWithinBookingWindow,
+  isMonthWithinBookingWindow,
+} from "@/lib/appointment-booking"
 import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
+import { cn } from "@/lib/utils"
 import useAppointmentStore, {
-  formatTime24ToDisplay,
   getSlotsForDate,
   type DoctorAppointmentStatus,
   type PatientAppointmentItem,
@@ -52,23 +66,6 @@ import useDoctorStore, {
   isDateOnDoctorAvailableDay,
   type DoctorListItem,
 } from "@/store/doctorStore"
-
-function StatusBadge({ status }: { status: DoctorAppointmentStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-        status === "Confirmed" && "bg-emerald-100 text-emerald-700",
-        status === "Pending" && "bg-amber-100 text-amber-700",
-        status === "Denied" && "bg-red-100 text-red-700",
-        status === "Completed" && "bg-sky-100 text-sky-700",
-        status === "Cancelled" && "bg-slate-100 text-slate-600",
-      )}
-    >
-      {status}
-    </span>
-  )
-}
 
 function formatAppointmentDate(date: string) {
   try {
@@ -82,7 +79,7 @@ function PatientAppointmentTableSkeleton() {
   return (
     <>
       {Array.from({ length: 5 }).map((_, index) => (
-        <TableRow key={index} className="border-slate-100">
+        <TableRow key={index} className="border-zinc-200">
           <TableCell className="px-4 py-3">
             <Skeleton className="h-4 w-32" />
           </TableCell>
@@ -98,9 +95,85 @@ function PatientAppointmentTableSkeleton() {
           <TableCell className="px-4 py-3">
             <Skeleton className="h-5 w-16 rounded-full" />
           </TableCell>
+          <TableCell className="px-4 py-3">
+            <Skeleton className="h-8 w-20" />
+          </TableCell>
         </TableRow>
       ))}
     </>
+  )
+}
+
+function canManageAppointment(status: DoctorAppointmentStatus) {
+  return status === "Pending" || status === "Confirmed"
+}
+
+function findDoctorForAppointment(
+  appointment: PatientAppointmentItem,
+  doctors: DoctorListItem[],
+): DoctorListItem | null {
+  if (appointment.doctorProfileId != null) {
+    const byId = doctors.find((doctor) => doctor.id === appointment.doctorProfileId)
+    if (byId) return byId
+  }
+
+  return (
+    doctors.find((doctor) => doctor.name === appointment.doctorName) ?? null
+  )
+}
+
+function PatientAppointmentRowActions({
+  appointment,
+  isUpdating,
+  onReschedule,
+  onCancel,
+}: {
+  appointment: PatientAppointmentItem
+  isUpdating: boolean
+  onReschedule: (appointment: PatientAppointmentItem) => void
+  onCancel: (appointment: PatientAppointmentItem) => void
+}) {
+  if (!canManageAppointment(appointment.status)) {
+    return <span className="text-sm text-zinc-400">—</span>
+  }
+
+  const isThisUpdating = isUpdating
+
+  return (
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            disabled={isThisUpdating}
+            className="size-8 rounded-lg border-zinc-200 text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+            aria-label="Reschedule"
+            onClick={() => onReschedule(appointment)}
+          >
+            <CalendarClockIcon className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent sideOffset={6}>Reschedule</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            disabled={isThisUpdating}
+            className="size-8 rounded-lg border-zinc-200 text-zinc-700 hover:bg-red-50 hover:text-red-600"
+            aria-label="Cancel"
+            onClick={() => onCancel(appointment)}
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent sideOffset={6}>Cancel</TooltipContent>
+      </Tooltip>
+    </div>
   )
 }
 
@@ -118,40 +191,6 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase()
-}
-
-function getEndOfNextMonth(from: Date = new Date()) {
-  const end = new Date(from.getFullYear(), from.getMonth() + 2, 0)
-  end.setHours(0, 0, 0, 0)
-  return end
-}
-
-function isDateWithinBookingWindow(date: Date, todayStart: Date) {
-  const day = new Date(date)
-  day.setHours(0, 0, 0, 0)
-  if (day < todayStart) return false
-  return day <= getEndOfNextMonth()
-}
-
-function isMonthWithinBookingWindow(month: Date, from: Date = new Date()) {
-  const current = new Date(from.getFullYear(), from.getMonth(), 1)
-  const next = new Date(from.getFullYear(), from.getMonth() + 1, 1)
-  const viewed = new Date(month.getFullYear(), month.getMonth(), 1)
-  return (
-    viewed.getTime() === current.getTime() ||
-    viewed.getTime() === next.getTime()
-  )
-}
-
-function formatSlotLabel(time: string) {
-  const [hourPart, minutePart = "00"] = time.split(":")
-  const hour = Number(hourPart)
-  const minute = Number(minutePart)
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return time
-
-  const period = hour >= 12 ? "pm" : "am"
-  const hour12 = hour % 12 || 12
-  return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`
 }
 
 function AppointmentDoctorCard({
@@ -175,8 +214,8 @@ function AppointmentDoctorCard({
         }
       }}
       className={cn(
-        "cursor-pointer gap-0 overflow-visible border-2 bg-white py-0 shadow-sm transition-[border-color,box-shadow] hover:shadow-md",
-        isSelected ? "border-sky-400" : "border-slate-200",
+        "cursor-pointer gap-0 overflow-visible border bg-white py-0 shadow-sm transition-[border-color,box-shadow] hover:shadow-md",
+        isSelected ? "border-zinc-400" : "border-zinc-200",
       )}
     >
       <CardContent className="p-4">
@@ -187,21 +226,21 @@ function AppointmentDoctorCard({
               alt={doctor.name}
               className="rounded-xl object-cover"
             />
-            <AvatarFallback className="rounded-xl bg-sky-100 font-semibold text-sky-700">
+            <AvatarFallback className="rounded-xl bg-zinc-100 font-semibold text-zinc-700">
               {getInitials(doctor.name)}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <p className="truncate text-sm font-semibold text-slate-800">
+            <p className="truncate text-sm font-semibold text-zinc-900">
               {doctor.name}
             </p>
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <StethoscopeIcon className="size-3.5 shrink-0 text-slate-400" />
+            <div className="flex items-center gap-1 text-xs text-zinc-500">
+              <StethoscopeIcon className="size-3.5 shrink-0 text-zinc-400" />
               <span className="truncate">{doctor.specialization}</span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <TagIcon className="size-3.5 shrink-0 text-slate-400" />
+            <div className="flex items-center gap-1 text-xs text-zinc-500">
+              <TagIcon className="size-3.5 shrink-0 text-zinc-400" />
               <span className="truncate">
                 {formatFee(doctor.fee)}/appointment
               </span>
@@ -215,7 +254,7 @@ function AppointmentDoctorCard({
 
 function AppointmentDoctorCardSkeleton() {
   return (
-    <Card className="gap-0 border-2 border-slate-200 bg-white py-0">
+    <Card className="gap-0 border border-zinc-200 bg-white py-0">
       <CardContent className="p-4">
         <div className="flex gap-3">
           <Skeleton className="size-16 shrink-0 rounded-xl" />
@@ -251,6 +290,10 @@ const PatientAppointments = () => {
   const [calendarCardHeight, setCalendarCardHeight] = useState<number>()
   const calendarCardRef = useRef<HTMLDivElement>(null)
 
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false)
+  const [appointmentToReschedule, setAppointmentToReschedule] =
+    useState<PatientAppointmentItem | null>(null)
+
   const { doctors, pagination, isLoading, error, fetchDoctors, clearError } =
     useDoctorStore()
 
@@ -276,15 +319,22 @@ const PatientAppointments = () => {
   const fetchPatientAppointments = useAppointmentStore(
     (state) => state.fetchPatientAppointments,
   )
+  const cancelAppointment = useAppointmentStore(
+    (state) => state.cancelAppointment,
+  )
+  const rescheduleAppointment = useAppointmentStore(
+    (state) => state.rescheduleAppointment,
+  )
+  const updatingAppointmentId = useAppointmentStore(
+    (state) => state.updatingAppointmentId,
+  )
   const clearPatientAppointmentsError = useAppointmentStore(
     (state) => state.clearPatientAppointmentsError,
   )
 
-  const todayStart = useMemo(() => {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    return d
-  }, [])
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [appointmentToCancel, setAppointmentToCancel] =
+    useState<PatientAppointmentItem | null>(null)
 
   const availableDaysOfWeek = useMemo(
     () => selectedDoctor?.availableDaysOfWeek ?? [],
@@ -301,6 +351,12 @@ const PatientAppointments = () => {
     if (!selectedDateKey || !weekSlots) return []
     return getSlotsForDate(weekSlots, selectedDateKey)
   }, [weekSlots, selectedDateKey])
+
+  const todayStart = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
 
   const bookingWindowEnd = useMemo(() => getEndOfNextMonth(), [])
 
@@ -326,6 +382,11 @@ const PatientAppointments = () => {
 
     return matchers
   }, [todayStart, bookingWindowEnd, selectedDoctor, availableDaysOfWeek])
+
+  const rescheduleDoctor = useMemo(() => {
+    if (!appointmentToReschedule) return null
+    return findDoctorForAppointment(appointmentToReschedule, doctors)
+  }, [appointmentToReschedule, doctors])
 
   useEffect(() => {
     fetchDoctors(1, 10).catch(() => undefined)
@@ -412,6 +473,38 @@ const PatientAppointments = () => {
     fetchPatientAppointments(page).catch(() => undefined)
   }
 
+  const openCancelDialog = (appointment: PatientAppointmentItem) => {
+    setAppointmentToCancel(appointment)
+    setCancelDialogOpen(true)
+  }
+
+  const handleCancelDialogOpenChange = (open: boolean) => {
+    setCancelDialogOpen(open)
+    if (!open) {
+      setAppointmentToCancel(null)
+    }
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!appointmentToCancel) return
+
+    try {
+      await cancelAppointment(appointmentToCancel.id)
+      toast.success("Appointment cancelled")
+      setCancelDialogOpen(false)
+      setAppointmentToCancel(null)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to cancel appointment"
+      toast.error(message)
+    }
+  }
+
+  const isCancelling =
+    cancelDialogOpen &&
+    appointmentToCancel !== null &&
+    updatingAppointmentId === appointmentToCancel.id
+
   const calendarComponents = useMemo(
     () => ({
       Weekday: ({
@@ -438,7 +531,7 @@ const PatientAppointments = () => {
             {...props}
             className={cn(
               className,
-              isAvailable && "font-semibold text-emerald-700",
+              isAvailable && "font-semibold text-zinc-900",
             )}
           >
             {children}
@@ -468,6 +561,53 @@ const PatientAppointments = () => {
 
     setSlotsDialogOpen(true)
   }
+
+  const openRescheduleDialog = (appointment: PatientAppointmentItem) => {
+    const doctor = findDoctorForAppointment(appointment, doctors)
+    const profileId = appointment.doctorProfileId ?? doctor?.id ?? null
+
+    if (profileId == null) {
+      toast.error("Could not find this doctor. Try refreshing the page.")
+      return
+    }
+
+    setAppointmentToReschedule(appointment)
+    setRescheduleDialogOpen(true)
+  }
+
+  const handleRescheduleDialogOpenChange = (open: boolean) => {
+    setRescheduleDialogOpen(open)
+    if (!open) {
+      setAppointmentToReschedule(null)
+      clearWeekSlots()
+    }
+  }
+
+  const handleConfirmReschedule = async (payload: {
+    appointmentId: number
+    appointmentDate: string
+    startTime: string
+  }) => {
+    try {
+      await rescheduleAppointment(payload.appointmentId, {
+        appointment_date: payload.appointmentDate,
+        start_time: payload.startTime,
+      })
+      toast.success("Appointment rescheduled")
+      setRescheduleDialogOpen(false)
+      setAppointmentToReschedule(null)
+      clearWeekSlots()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to reschedule appointment"
+      toast.error(message)
+    }
+  }
+
+  const isRescheduling =
+    rescheduleDialogOpen &&
+    appointmentToReschedule !== null &&
+    updatingAppointmentId === appointmentToReschedule.id
 
   const handleBookAppointment = async () => {
     if (
@@ -514,9 +654,9 @@ const PatientAppointments = () => {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex h-12 items-center gap-2 border-b border-slate-100 px-4">
+      <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4">
         <SidebarTrigger />
-        <span className="text-sm font-medium text-slate-700">
+        <span className="text-sm font-medium text-zinc-700">
           My Appointments
         </span>
       </header>
@@ -526,8 +666,8 @@ const PatientAppointments = () => {
         {/* Left — doctors (single column) */}
         <aside className="flex w-full shrink-0 flex-col gap-3 xl:w-[300px]">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">
-              Choose Doctor
+            <h2 className="text-lg font-semibold text-zinc-900">
+              1. Choose Doctor
             </h2>
           </div>
 
@@ -552,7 +692,7 @@ const PatientAppointments = () => {
           ) : null}
 
           <Card
-            className="flex flex-col gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm"
+            className="flex flex-col gap-0 overflow-hidden border-zinc-200 bg-white py-0 shadow-sm"
             style={
               calendarCardHeight
                 ? { height: `${calendarCardHeight}px` }
@@ -575,8 +715,8 @@ const PatientAppointments = () => {
                     />
                   ))
                 ) : (
-                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center">
-                    <p className="text-sm text-slate-500">
+                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-zinc-200 py-10 text-center">
+                    <p className="text-sm text-zinc-500">
                       No doctors available
                     </p>
                   </div>
@@ -584,8 +724,8 @@ const PatientAppointments = () => {
               </div>
 
               {pagination && pagination.totalPages > 1 && !isLoading ? (
-                <div className="mt-3 flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                  <p className="text-xs text-slate-500">
+                <div className="mt-3 flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 pt-3">
+                  <p className="text-xs text-zinc-500">
                     {pagination.page}/{pagination.totalPages}
                   </p>
                   <div className="flex gap-1">
@@ -617,14 +757,13 @@ const PatientAppointments = () => {
         {/* Middle — date */}
         <section className="flex w-full shrink-0 flex-col gap-3 xl:w-[340px]">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">
-              Choose date
+            <h2 className="text-lg font-semibold text-zinc-900">
+              2. Choose date
             </h2>
-
           </div>
 
           <div ref={calendarCardRef} className="w-full">
-            <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+            <Card className="w-full gap-0 overflow-hidden border-zinc-200 bg-white py-0 shadow-sm">
               <CardContent className="p-3">
                 <Calendar
                   mode="single"
@@ -647,7 +786,7 @@ const PatientAppointments = () => {
                   }}
                   modifiersClassNames={{
                     doctorAvailable:
-                      "bg-emerald-50 font-medium text-emerald-900 [&_button]:font-semibold [&_button]:text-emerald-800 [&_button]:hover:bg-emerald-100",
+                      "bg-zinc-100 font-medium text-zinc-900 [&_button]:font-semibold [&_button]:text-zinc-800 [&_button]:hover:bg-zinc-200",
                   }}
                   components={calendarComponents}
                   className="w-full rounded-xl [--cell-size:2.25rem]"
@@ -664,13 +803,13 @@ const PatientAppointments = () => {
         {/* Right — patient concern */}
         <section className="flex min-w-0 flex-1 flex-col gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">
-              Your concern
+            <h2 className="text-lg font-semibold text-zinc-900">
+              3. Your concern
             </h2>
           </div>
 
           <Card
-            className="flex flex-col gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm"
+            className="flex flex-col gap-0 overflow-hidden border-zinc-200 bg-white py-0 shadow-sm"
             style={
               calendarCardHeight
                 ? { height: `${calendarCardHeight}px` }
@@ -681,7 +820,7 @@ const PatientAppointments = () => {
               <div className="flex min-h-0 flex-1 flex-col gap-2">
                 <Label
                   htmlFor="concern"
-                  className="shrink-0 text-sm font-semibold text-slate-900"
+                  className="shrink-0 text-sm font-semibold text-zinc-900"
                 >
                   Describe your concern or symptoms
                 </Label>
@@ -690,26 +829,26 @@ const PatientAppointments = () => {
                   value={concern}
                   onChange={(e) => setConcern(e.target.value)}
                   placeholder="e.g. I've had a persistent cough and mild fever for 3 days..."
-                  className="min-h-0 flex-1 resize-none rounded-xl border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                  className="min-h-0 flex-1 resize-none rounded-xl border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
                 />
-                <p className="shrink-0 text-xs text-slate-500">
+                <p className="shrink-0 text-xs text-zinc-500">
                   This will be shared with your doctor before the appointment.
                 </p>
               </div>
 
               {selectedDoctor ? (
-                <div className="shrink-0 rounded-xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-slate-600">
-                  <span className="font-medium text-slate-800">Doctor:</span>{" "}
+                <div className="shrink-0 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+                  <span className="font-medium text-zinc-900">Doctor:</span>{" "}
                   {selectedDoctor.name}
                   {selectedDate ? (
                     <>
                       <br />
-                      <span className="font-medium text-slate-800">
+                      <span className="font-medium text-zinc-900">
                         Date & Time:
                       </span>{" "}
                       {format(selectedDate, "MMM d, yyyy")}
                       {selectedTime
-                        ? ` | ${formatSlotLabel(selectedTime)}`
+                        ? ` | ${formatAppointmentSlotLabel(selectedTime)}`
                         : null}
                     </>
                   ) : null}
@@ -728,7 +867,7 @@ const PatientAppointments = () => {
                 onClick={() => {
                   handleBookAppointment().catch(() => undefined)
                 }}
-                className="h-10 w-full shrink-0 rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
+                className="h-10 w-full shrink-0 rounded-xl bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
               >
                 {isBooking ? "Booking…" : "Book appointment"}
               </Button>
@@ -740,7 +879,7 @@ const PatientAppointments = () => {
         {/* Appointments table — full width */}
         <section className="w-full min-w-0">
           <div className="mb-3">
-            <h2 className="text-lg font-semibold text-slate-800">
+            <h2 className="text-lg font-semibold text-zinc-900">
               My Appointments
             </h2>
           </div>
@@ -764,25 +903,28 @@ const PatientAppointments = () => {
             </div>
           ) : null}
 
-          <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+          <Card className="w-full gap-0 overflow-hidden rounded-lg border-zinc-200 bg-white py-0 shadow-sm">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-slate-100 hover:bg-transparent">
-                    <TableHead className="h-11 px-4 text-slate-600">
+                  <TableRow className="border-zinc-200 bg-zinc-50/80 hover:bg-zinc-50/80">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Doctor
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Date
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Time
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Room
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Status
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-right font-medium text-zinc-900">
+                      Action
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -794,16 +936,16 @@ const PatientAppointments = () => {
                       (appointment: PatientAppointmentItem) => (
                         <TableRow
                           key={appointment.id}
-                          className="border-slate-100"
+                          className="border-zinc-200"
                         >
-                          <TableCell className="px-4 py-3 font-medium text-slate-800">
+                          <TableCell className="px-4 py-3 font-medium text-zinc-900">
                             {appointment.doctorName}
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-slate-600">
+                          <TableCell className="px-4 py-3 text-zinc-600">
                             {formatAppointmentDate(appointment.appointmentDate)}
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-slate-600">
-                            {formatTime24ToDisplay(appointment.startTime)}
+                          <TableCell className="px-4 py-3 text-zinc-600">
+                            {formatAppointmentSlotLabel(appointment.startTime)}
                           </TableCell>
                           <TableCell className="px-4 py-3">
                             <JoinRoomLink
@@ -812,7 +954,19 @@ const PatientAppointments = () => {
                             />
                           </TableCell>
                           <TableCell className="px-4 py-3">
-                            <StatusBadge status={appointment.status} />
+                            <AppointmentStatusBadge status={appointment.status} />
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-right">
+                            <div className="flex justify-end">
+                              <PatientAppointmentRowActions
+                                appointment={appointment}
+                                isUpdating={
+                                  updatingAppointmentId === appointment.id
+                                }
+                                onReschedule={openRescheduleDialog}
+                                onCancel={openCancelDialog}
+                              />
+                            </div>
                           </TableCell>
                         </TableRow>
                       ),
@@ -820,8 +974,8 @@ const PatientAppointments = () => {
                   ) : (
                     <TableRow className="hover:bg-transparent">
                       <TableCell
-                        colSpan={5}
-                        className="px-4 py-10 text-center text-sm text-slate-500"
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-sm text-zinc-500"
                       >
                         No appointments yet. Book one above to get started.
                       </TableCell>
@@ -836,7 +990,7 @@ const PatientAppointments = () => {
           patientAppointmentsMeta.totalPages > 1 &&
           !isLoadingPatientAppointments ? (
             <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-zinc-500">
                 Page {patientAppointmentsMeta.page} of{" "}
                 {patientAppointmentsMeta.totalPages}
               </p>
@@ -873,13 +1027,10 @@ const PatientAppointments = () => {
         </section>
       </div>
 
-      <Dialog
-        open={slotsDialogOpen}
-        onOpenChange={setSlotsDialogOpen}
-      >
+      <Dialog open={slotsDialogOpen} onOpenChange={setSlotsDialogOpen}>
         <DialogContent
-          overlayClassName="bg-slate-900/15 backdrop-blur-none"
-          className="max-w-[280px] gap-0 border-slate-200 p-0 shadow-lg sm:max-w-[300px]"
+          overlayClassName="bg-zinc-900/15 backdrop-blur-none"
+          className="max-w-[280px] gap-0 border-zinc-200 p-0 shadow-lg sm:max-w-[300px]"
         >
           <DialogHeader className="border-b-0 px-5 pt-5 pb-2">
             <DialogTitle className="text-base">Choose a time</DialogTitle>
@@ -903,7 +1054,7 @@ const PatientAppointments = () => {
             ) : slotsError ? (
               <p className="text-center text-sm text-red-600">{slotsError}</p>
             ) : availableSlots.length === 0 ? (
-              <p className="text-center text-sm text-slate-500">
+              <p className="text-center text-sm text-zinc-500">
                 No time slots available for this date.
               </p>
             ) : (
@@ -919,15 +1070,98 @@ const PatientAppointments = () => {
                     className={cn(
                       "rounded-full border bg-white px-3 py-2 text-sm font-medium transition-colors",
                       selectedTime === slot
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                        : "border-slate-300 text-sky-600 hover:border-sky-300 hover:bg-sky-50",
+                        ? "border-zinc-900 bg-zinc-100 text-zinc-900"
+                        : "border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50",
                     )}
                   >
-                    {formatSlotLabel(slot)}
+                    {formatAppointmentSlotLabel(slot)}
                   </button>
                 ))}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <RescheduleAppointmentDialog
+        open={rescheduleDialogOpen}
+        onOpenChange={handleRescheduleDialogOpenChange}
+        appointmentId={appointmentToReschedule?.id ?? null}
+        doctorName={appointmentToReschedule?.doctorName ?? ""}
+        doctorProfileId={
+          rescheduleDoctor?.id ??
+          appointmentToReschedule?.doctorProfileId ??
+          null
+        }
+        availableDaysOfWeek={
+          rescheduleDoctor?.availableDaysOfWeek ??
+          []
+        }
+        currentAppointmentDate={
+          appointmentToReschedule?.appointmentDate ?? ""
+        }
+        currentStartTime={appointmentToReschedule?.startTime ?? ""}
+        isSubmitting={isRescheduling}
+        onConfirm={handleConfirmReschedule}
+      />
+
+      <Dialog
+        open={cancelDialogOpen}
+        onOpenChange={handleCancelDialogOpenChange}
+      >
+        <DialogContent
+          showCloseButton={false}
+          overlayClassName="bg-zinc-900/20 backdrop-blur-sm"
+          className="max-w-md gap-0 overflow-hidden rounded-lg border-zinc-200 p-0 shadow-lg sm:max-w-md"
+        >
+          <DialogHeader className="space-y-2 border-0 px-6 pt-6 pb-0 pr-6">
+            <DialogTitle className="text-base font-semibold text-zinc-900">
+              Are you sure?
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-zinc-500">
+              {appointmentToCancel ? (
+                <>
+                  This will cancel your appointment with{" "}
+                  <span className="font-medium text-zinc-700">
+                    {appointmentToCancel.doctorName}
+                  </span>{" "}
+                  on{" "}
+                  <span className="font-medium text-zinc-700">
+                    {format(
+                      parseISO(appointmentToCancel.appointmentDate),
+                      "MMM d, yyyy",
+                    )}
+                  </span>{" "}
+                  at{" "}
+                  <span className="font-medium text-zinc-700">
+                    {formatAppointmentSlotLabel(appointmentToCancel.startTime)}
+                  </span>
+                  . This action cannot be undone.
+                </>
+              ) : (
+                "This will cancel your appointment. This action cannot be undone."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col-reverse gap-2 px-6 pt-5 pb-6 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isCancelling}
+              onClick={() => handleCancelDialogOpenChange(false)}
+              className="h-9 rounded-lg border-zinc-200 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Keep appointment
+            </Button>
+            <Button
+              type="button"
+              disabled={isCancelling}
+              onClick={() => void handleConfirmCancel()}
+              className="h-9 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+            >
+              {isCancelling ? "Cancelling…" : "Yes, cancel"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

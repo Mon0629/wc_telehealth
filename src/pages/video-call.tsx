@@ -87,7 +87,7 @@ export default function VideoCallPage() {
         </div>
 
         {isDoctor ? (
-          <aside className="flex h-80 w-full shrink-0 flex-col border-t border-slate-200 bg-white lg:h-full lg:w-[400px] lg:max-w-md lg:border-t-0 lg:border-l">
+          <aside className="flex h-80 w-full shrink-0 flex-col border-t border-zinc-200 bg-white lg:h-full lg:w-[400px] lg:max-w-md lg:border-t-0 lg:border-l">
             <ConsultationNotesPanel
               appointmentId={parsedAppointmentId}
               initialPatientNotes={patientNotes}

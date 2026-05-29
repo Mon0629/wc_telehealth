@@ -57,7 +57,7 @@ function MedicalRecordsTableSkeleton() {
   return (
     <>
       {Array.from({ length: 5 }).map((_, index) => (
-        <TableRow key={index} className="border-slate-100">
+        <TableRow key={index} className="border-zinc-200">
           <TableCell className="px-4 py-3">
             <Skeleton className="h-4 w-36" />
           </TableCell>
@@ -86,7 +86,7 @@ function RecordLinkButton({
   onClick?: () => void
 }) {
   if (!onClick) {
-    return <span className="text-sm text-slate-400">{label}</span>
+    return <span className="text-sm text-zinc-400">{label}</span>
   }
 
   return (
@@ -94,8 +94,8 @@ function RecordLinkButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "max-w-[200px] truncate text-left text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700 hover:underline",
-        isActive && "text-indigo-700 underline",
+        "max-w-[200px] truncate text-left text-sm font-medium text-zinc-900 transition-colors hover:underline",
+        isActive && "underline",
       )}
     >
       {label}
@@ -121,25 +121,25 @@ function DetailPanelShell({
   children: ReactNode
 }) {
   return (
-    <aside className="flex w-full shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 lg:w-[360px] xl:w-[400px]">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+    <aside className="flex w-full shrink-0 flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm lg:w-[360px] xl:w-[400px]">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
         <div className="flex items-center gap-2">
-          <Icon className="size-4 text-indigo-500" />
-          <h2 className="text-base font-semibold text-slate-800">{title}</h2>
+          <Icon className="size-4 text-zinc-600" />
+          <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+          className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
           aria-label="Close"
         >
           <XIcon className="size-4" />
         </button>
       </div>
 
-      <div className="border-b border-slate-100 px-5 py-3">
-        <p className="text-sm font-semibold text-slate-900">{doctorName}</p>
-        <p className="text-xs text-slate-500">
+      <div className="border-b border-zinc-200 px-5 py-3">
+        <p className="text-sm font-semibold text-zinc-900">{doctorName}</p>
+        <p className="text-xs text-zinc-500">
           {formatAppointmentDate(appointmentDate)}
           {startTime ? ` · ${formatTime24ToDisplay(startTime)}` : null}
         </p>
@@ -179,16 +179,16 @@ function ConsultationNotesDetailPanel({
         {hasConsultationNotes(notes) ? (
           fields.map(({ key, label }) => (
             <section key={key} className="space-y-1">
-              <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
                 {label}
               </h3>
-              <p className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm leading-relaxed text-slate-700">
+              <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm leading-relaxed text-zinc-700">
                 {notes?.[key]?.trim() || "—"}
               </p>
             </section>
           ))
         ) : (
-          <p className="py-8 text-center text-sm text-slate-500">
+          <p className="py-8 text-center text-sm text-zinc-500">
             No consultation notes recorded for this appointment.
           </p>
         )}
@@ -220,35 +220,35 @@ function PrescriptionDetailPanel({
           items.map((item, index) => (
             <Card
               key={`${item.medicine_name}-${index}`}
-              className="gap-0 border-slate-200 bg-slate-50/60 py-0 shadow-none"
+              className="gap-0 border-zinc-200 bg-zinc-50 py-0 shadow-none"
             >
               <CardContent className="space-y-2 p-4">
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-zinc-900">
                   {item.medicine_name || `Medicine ${index + 1}`}
                 </p>
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600">
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-zinc-600">
                   {item.dosage ? (
                     <>
-                      <dt className="font-medium text-slate-500">Dosage</dt>
+                      <dt className="font-medium text-zinc-500">Dosage</dt>
                       <dd>{item.dosage}</dd>
                     </>
                   ) : null}
                   {item.frequency ? (
                     <>
-                      <dt className="font-medium text-slate-500">Frequency</dt>
+                      <dt className="font-medium text-zinc-500">Frequency</dt>
                       <dd>{item.frequency}</dd>
                     </>
                   ) : null}
                   {item.duration ? (
                     <>
-                      <dt className="font-medium text-slate-500">Duration</dt>
+                      <dt className="font-medium text-zinc-500">Duration</dt>
                       <dd>{item.duration}</dd>
                     </>
                   ) : null}
                 </dl>
                 {item.instructions?.trim() ? (
-                  <p className="text-xs leading-relaxed text-slate-600">
-                    <span className="font-medium text-slate-700">
+                  <p className="text-xs leading-relaxed text-zinc-600">
+                    <span className="font-medium text-zinc-800">
                       Instructions:
                     </span>{" "}
                     {item.instructions}
@@ -258,7 +258,7 @@ function PrescriptionDetailPanel({
             </Card>
           ))
         ) : (
-          <p className="py-8 text-center text-sm text-slate-500">
+          <p className="py-8 text-center text-sm text-zinc-500">
             No prescription recorded for this appointment.
           </p>
         )}
@@ -340,9 +340,9 @@ const PatientMedicalRecords = () => {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex h-12 items-center gap-2 border-b border-slate-100 px-4">
+      <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4">
         <SidebarTrigger />
-        <span className="text-sm font-medium text-slate-700">
+        <span className="text-sm font-medium text-zinc-700">
           Medical Records
         </span>
       </header>
@@ -350,10 +350,10 @@ const PatientMedicalRecords = () => {
       <div className="flex flex-1 flex-col gap-4 overflow-hidden p-5 lg:flex-row lg:gap-6">
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-auto">
           <div>
-            <h1 className="text-lg font-semibold text-slate-800">
+            <h1 className="text-lg font-semibold text-zinc-900">
               My Medical Records
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-zinc-500">
               View consultation notes and prescriptions from your past
               appointments.
             </p>
@@ -375,21 +375,21 @@ const PatientMedicalRecords = () => {
             </div>
           ) : null}
 
-          <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+          <Card className="w-full gap-0 overflow-hidden rounded-lg border-zinc-200 bg-white py-0 shadow-sm">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-slate-100 hover:bg-transparent">
-                    <TableHead className="h-11 px-4 text-slate-600">
+                  <TableRow className="border-zinc-200 bg-zinc-50/80 hover:bg-zinc-50/80">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Doctor
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Appointment date
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Consultation notes
                     </TableHead>
-                    <TableHead className="h-11 px-4 text-slate-600">
+                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
                       Prescription
                     </TableHead>
                   </TableRow>
@@ -409,17 +409,17 @@ const PatientMedicalRecords = () => {
                       return (
                         <TableRow
                           key={row.appointmentId}
-                          className="border-slate-100"
+                          className="border-zinc-200"
                         >
-                          <TableCell className="px-4 py-3 font-medium text-slate-800">
+                          <TableCell className="px-4 py-3 font-medium text-zinc-900">
                             {row.doctorName}
                           </TableCell>
-                          <TableCell className="px-4 py-3 text-slate-600">
+                          <TableCell className="px-4 py-3 text-zinc-600">
                             <div>
                               {formatAppointmentDate(row.appointmentDate)}
                             </div>
                             {row.startTime ? (
-                              <div className="text-xs text-slate-400">
+                              <div className="text-xs text-zinc-400">
                                 {formatTime24ToDisplay(row.startTime)}
                               </div>
                             ) : null}
@@ -461,7 +461,7 @@ const PatientMedicalRecords = () => {
                     <TableRow className="hover:bg-transparent">
                       <TableCell
                         colSpan={4}
-                        className="px-4 py-10 text-center text-sm text-slate-500"
+                        className="px-4 py-10 text-center text-sm text-zinc-500"
                       >
                         No medical records yet. Notes and prescriptions will
                         appear here after your doctor completes a visit.

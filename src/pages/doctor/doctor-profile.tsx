@@ -44,18 +44,18 @@ import useDoctorProfileStore, {
 // ─── style constants ─────────────────────────────────────────────────────────
 
 const inputClassName =
-  "h-11 rounded-xl border-sky-100 bg-sky-50/50 px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+  "h-11 rounded-xl border-zinc-200 bg-zinc-50 px-4 text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
 
 const timeInputClassName = `${inputClassName} [color-scheme:light] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-90 [&::-webkit-calendar-picker-indicator]:brightness-0`
 
 const readOnlyClassName =
-  "h-11 cursor-not-allowed rounded-xl border-slate-200 bg-slate-50 px-4 text-slate-600"
+  "h-11 cursor-not-allowed rounded-xl border-zinc-200 bg-zinc-50 px-4 text-zinc-600"
 
 const textareaClassName =
-  "resize-none rounded-xl border-sky-100 bg-sky-50/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+  "resize-none rounded-xl border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
 
 const selectClassName =
-  "h-11 w-full rounded-xl border border-sky-100 bg-sky-50/50 px-4 text-sm text-slate-900 outline-none focus-visible:border-sky-300 focus-visible:ring-3 focus-visible:ring-sky-200/60"
+  "h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm text-zinc-900 outline-none focus-visible:border-zinc-400 focus-visible:ring-3 focus-visible:ring-zinc-300/60"
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -163,14 +163,14 @@ function ProfileAvatarPicker({
             alt={displayName || "Profile"}
             className="rounded-full"
           />
-          <AvatarFallback className="rounded-full bg-sky-100 text-xl font-semibold text-sky-700">
+          <AvatarFallback className="rounded-full bg-zinc-100 text-xl font-semibold text-zinc-700">
             {initials}
           </AvatarFallback>
         </Avatar>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="absolute -bottom-1 -right-1 flex size-9 items-center justify-center rounded-full border-2 border-white bg-sky-600 text-white shadow-sm transition hover:bg-sky-700"
+          className="absolute -bottom-1 -right-1 flex size-9 items-center justify-center rounded-full border-2 border-white bg-zinc-900 text-white shadow-sm transition hover:bg-zinc-700"
           aria-label="Change profile picture"
         >
           <CameraIcon className="size-4" />
@@ -188,7 +188,7 @@ function ProfileAvatarPicker({
           type="button"
           variant="ghost"
           size="sm"
-          className="mt-2 rounded-full text-slate-500 hover:text-slate-900"
+          className="mt-2 rounded-full text-zinc-500 hover:text-zinc-900"
           onClick={() => onChange("", null)}
         >
           Remove photo
@@ -229,14 +229,14 @@ function AvailabilityEditor({
   return (
     <div className="flex flex-col gap-3">
       {safeSlots.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-sky-200 bg-sky-50/40 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
           No availability added yet. Add when patients can book you.
         </p>
       ) : (
         safeSlots.map((slot) => (
           <div
             key={slot.id}
-            className="rounded-xl border border-sky-100 bg-sky-50/30 p-4"
+            className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
           >
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
               <Field className="gap-2">
@@ -282,14 +282,14 @@ function AvailabilityEditor({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="shrink-0 text-slate-400 hover:bg-red-50 hover:text-red-600 sm:mb-0.5"
+                className="shrink-0 text-zinc-400 hover:bg-red-50 hover:text-red-600 sm:mb-0.5"
                 onClick={() => removeSlot(slot.id)}
                 aria-label="Remove availability"
               >
                 <Trash2Icon className="size-4" />
               </Button>
             </div>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-zinc-500">
               {getDayLabel(slot.dayOfWeek)} · {formatTime12h(slot.startTime)} –{" "}
               {formatTime12h(slot.endTime)}
             </p>
@@ -299,7 +299,7 @@ function AvailabilityEditor({
       <Button
         type="button"
         variant="outline"
-        className="w-full rounded-full border-sky-200 text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-full border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={addSlot}
         disabled={allDaysScheduled}
       >
@@ -323,12 +323,12 @@ function SectionHeading({
 }) {
   return (
     <div className="flex items-start gap-3 pb-1">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100">
-        <Icon className="size-4 text-sky-600" />
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+        <Icon className="size-4 text-zinc-600" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-        <p className="text-xs text-slate-500">{description}</p>
+        <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+        <p className="text-xs text-zinc-500">{description}</p>
       </div>
     </div>
   )
@@ -438,7 +438,7 @@ export function DoctorProfileModal() {
         onEscapeKeyDown={(e) => isFirstLogin && e.preventDefault()}
       >
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <DialogHeader className="shrink-0 bg-gradient-to-br from-sky-50/80 to-white">
+          <DialogHeader className="shrink-0 border-b border-zinc-200 bg-zinc-50">
             <ProfileAvatarPicker
               avatarUrl={form.avatarUrl}
               displayName={displayName}
@@ -609,7 +609,7 @@ export function DoctorProfileModal() {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full border-slate-200"
+                className="rounded-full border-zinc-200"
                 onClick={closeProfile}
                 disabled={isLoading || isFetching}
               >
@@ -618,7 +618,7 @@ export function DoctorProfileModal() {
             ) : null}
             <Button
               type="submit"
-              className="rounded-full bg-sky-600 text-white hover:bg-sky-700"
+              className="rounded-full bg-zinc-900 text-white hover:bg-zinc-700"
               disabled={isLoading || isFetching}
             >
               {isLoading

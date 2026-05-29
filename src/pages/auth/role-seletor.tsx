@@ -30,51 +30,41 @@ export default function RoleSelector() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-white px-4 py-4 text-slate-900">
-      {/* Background blobs matching Login / Signup */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 left-1/2 h-72 w-xl -translate-x-1/2 rounded-full bg-sky-100/60 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl" />
-      </div>
-
-      <div className="relative mx-auto w-full max-w-xl">
-        {/* Back link */}
+    <div className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-4 text-zinc-900">
+      <div className="mx-auto w-full max-w-xl">
         <Link
           to="/"
-          className="mb-6 inline-flex items-center gap-2 rounded-full px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          className="mb-6 inline-flex items-center gap-2 rounded-full px-3 text-sm font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
         >
           ← Back to home
         </Link>
 
-        {/* Page heading */}
         <div className="mb-6 text-center">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-            Join Konsultify<span className="text-sky-600">.</span>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+            Join Konsultify
           </h1>
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-zinc-500">
             Choose how you'd like to register.
           </p>
         </div>
 
-        {/* Role cards */}
         <div className="grid gap-4 sm:grid-cols-2">
           {roles.map(({ role, label, description, image, route }) => (
             <Card
               key={role}
               size="sm"
-              className="group cursor-pointer border-slate-200/70 bg-white/70 shadow-[0_20px_60px_-32px_rgba(2,132,199,0.25)] backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:border-sky-300 hover:shadow-[0_24px_64px_-28px_rgba(2,132,199,0.45)]"
+              className="group cursor-pointer border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md"
               onClick={() => navigate(route)}
             >
-              {/* Image area */}
-              <div className="mx-3 mt-3 overflow-hidden rounded-lg bg-sky-50">
+              <div className="mx-3 mt-3 overflow-hidden rounded-lg bg-zinc-100">
                 {image ? (
                   <img
                     src={image}
                     alt={label}
-                    className="h-40 w-full object-cover"
+                    className="h-48 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-40 items-center justify-center">
+                  <div className="flex h-48 items-center justify-center">
                     {role === "patient" ? (
                       <PatientIllustration />
                     ) : (
@@ -85,10 +75,10 @@ export default function RoleSelector() {
               </div>
 
               <CardHeader className="px-5 pb-1 pt-3 text-center">
-                <CardTitle className="text-lg font-semibold text-slate-900">
+                <CardTitle className="text-lg font-semibold text-zinc-900">
                   {label}
                 </CardTitle>
-                <CardDescription className="text-slate-500">
+                <CardDescription className="text-zinc-500">
                   {description}
                 </CardDescription>
               </CardHeader>
@@ -97,7 +87,7 @@ export default function RoleSelector() {
 
               <CardFooter className="border-t-0 bg-transparent px-5 pb-5">
                 <Button
-                  className="h-10 w-full rounded-full bg-sky-600 text-white shadow-sm hover:bg-sky-700 focus-visible:ring-sky-200/70"
+                  className="h-10 w-full rounded-full bg-zinc-900 text-white shadow-sm hover:bg-zinc-700 focus-visible:ring-zinc-400/70"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(route);
@@ -110,12 +100,11 @@ export default function RoleSelector() {
           ))}
         </div>
 
-        {/* Login prompt */}
-        <p className="mt-8 text-center text-sm text-slate-500">
+        <p className="mt-8 text-center text-sm text-zinc-500">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="font-medium text-sky-600 underline-offset-4 hover:text-sky-700 hover:underline"
+            className="font-medium text-zinc-900 underline-offset-4 hover:underline"
           >
             Sign in
           </Link>
@@ -128,24 +117,25 @@ export default function RoleSelector() {
 function PatientIllustration() {
   return (
     <svg
-      width="96"
-      height="96"
+      width="128"
+      height="128"
       viewBox="0 0 96 96"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
+      className="shrink-0"
     >
-      <circle cx="48" cy="32" r="18" fill="#bae6fd" />
-      <circle cx="48" cy="32" r="12" fill="#0ea5e9" />
+      <circle cx="48" cy="32" r="18" fill="#e4e4e7" />
+      <circle cx="48" cy="32" r="12" fill="#71717a" />
       <path
         d="M16 80c0-17.673 14.327-32 32-32s32 14.327 32 32"
-        stroke="#0ea5e9"
+        stroke="#52525b"
         strokeWidth="4"
         strokeLinecap="round"
-        fill="#e0f2fe"
+        fill="#f4f4f5"
       />
-      <rect x="40" y="58" width="16" height="4" rx="2" fill="#0ea5e9" />
-      <rect x="44" y="54" width="8" height="12" rx="2" fill="#0ea5e9" />
+      <rect x="40" y="58" width="16" height="4" rx="2" fill="#52525b" />
+      <rect x="44" y="54" width="8" height="12" rx="2" fill="#52525b" />
     </svg>
   );
 }
@@ -153,27 +143,27 @@ function PatientIllustration() {
 function DoctorIllustration() {
   return (
     <svg
-      width="96"
-      height="96"
+      width="128"
+      height="128"
       viewBox="0 0 96 96"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
+      className="shrink-0"
     >
-      <circle cx="48" cy="28" r="18" fill="#bae6fd" />
-      <circle cx="48" cy="28" r="12" fill="#0284c7" />
+      <circle cx="48" cy="28" r="18" fill="#e4e4e7" />
+      <circle cx="48" cy="28" r="12" fill="#3f3f46" />
       <path
         d="M16 76c0-17.673 14.327-32 32-32s32 14.327 32 32"
-        stroke="#0284c7"
+        stroke="#52525b"
         strokeWidth="4"
         strokeLinecap="round"
-        fill="#e0f2fe"
+        fill="#f4f4f5"
       />
-      {/* stethoscope */}
-      <circle cx="62" cy="72" r="7" fill="#fff" stroke="#0284c7" strokeWidth="2.5" />
+      <circle cx="62" cy="72" r="7" fill="#fff" stroke="#52525b" strokeWidth="2.5" />
       <path
         d="M55 72c0-4 3-7 7-7"
-        stroke="#0284c7"
+        stroke="#52525b"
         strokeWidth="2.5"
         strokeLinecap="round"
         fill="none"

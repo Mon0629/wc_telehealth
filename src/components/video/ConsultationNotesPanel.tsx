@@ -167,7 +167,7 @@ export function ConsultationNotesPanel({
   }, [appointmentId, form])
 
   const textareaClassName =
-    "resize-none rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+    "resize-none rounded-xl border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
 
   return (
     <>
@@ -178,11 +178,11 @@ export function ConsultationNotesPanel({
       />
 
     <div className="flex h-full flex-col">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <h2 className="text-base font-semibold text-slate-900">
+      <div className="border-b border-zinc-200 px-5 py-4">
+        <h2 className="text-base font-semibold text-zinc-900">
           Consultation notes
         </h2>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-zinc-500">
           Patient concern is from their booking. Complete all fields before
           saving.
         </p>
@@ -192,25 +192,25 @@ export function ConsultationNotesPanel({
         <div className="flex flex-col gap-2">
           <Label
             htmlFor="patient-notes"
-            className="text-sm font-medium text-slate-800"
+            className="text-sm font-medium text-zinc-800"
           >
             Patient concern
           </Label>
           {isLoading && !patientNotes ? (
-            <div className="min-h-16 rounded-xl border border-slate-200 bg-slate-50" />
+            <div className="min-h-16 rounded-xl border border-zinc-200 bg-zinc-50" />
           ) : (
             <Textarea
               id="patient-notes"
               readOnly
               value={patientNotes || "No concern provided."}
-              className="min-h-16 resize-none rounded-xl border-slate-200 bg-slate-50 text-sm text-slate-600"
+              className="min-h-16 resize-none rounded-xl border-zinc-200 bg-zinc-50 text-sm text-zinc-600"
             />
           )}
         </div>
 
         {NOTE_FIELDS.map(({ key, label, placeholder, minHeight }) => (
           <div key={key} className="flex flex-col gap-2">
-            <Label htmlFor={key} className="text-sm font-medium text-slate-800">
+            <Label htmlFor={key} className="text-sm font-medium text-zinc-800">
               {label}
             </Label>
             <Textarea
@@ -225,14 +225,14 @@ export function ConsultationNotesPanel({
         ))}
       </div>
 
-      <div className="border-t border-slate-200 px-5 py-4">
+      <div className="border-t border-zinc-200 px-5 py-4">
         <Button
           type="button"
           disabled={isLoading || isSaving}
           onClick={() => {
             handleSave().catch(() => undefined)
           }}
-          className="h-10 w-full rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600"
+          className="h-10 w-full rounded-xl bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-700"
         >
           {isSaving ? "Saving…" : "Save notes"}
         </Button>

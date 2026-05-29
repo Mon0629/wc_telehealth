@@ -27,6 +27,11 @@ export interface CreateAppointmentPayload {
   patient_notes: string;
 }
 
+export interface RescheduleAppointmentPayload {
+  appointment_date: string;
+  start_time: string;
+}
+
 export type DoctorAppointmentStatus =
   | "Pending"
   | "Confirmed"
@@ -107,6 +112,7 @@ export interface DoctorAppointmentItem {
 
 export interface PatientAppointmentItem {
   id: number;
+  doctorProfileId: number | null;
   doctorName: string;
   appointmentDate: string;
   startTime: string;
@@ -206,17 +212,42 @@ export function normalizeDoctorAppointment(
   };
 }
 
+function resolveDoctorProfileId(item: DoctorAppointmentApiItem): number | null {
+  return item.doctor_profile_id ?? item.doctorProfile?.id ?? null;
+}
+
 export function normalizePatientAppointment(
   item: DoctorAppointmentApiItem,
 ): PatientAppointmentItem {
   return {
     id: item.id,
+    doctorProfileId: resolveDoctorProfileId(item),
     doctorName: resolveDoctorName(item),
     appointmentDate: item.appointment_date,
     startTime: item.start_time,
     roomLink: resolveRoomLink(item),
     videoRoomId: item.video_room_id ?? null,
     status: normalizeAppointmentStatus(item.status),
+  };
+}
+
+/** PATCH responses often omit nested doctor profile; keep list fields we already have. */
+function mergePatientAppointmentUpdate(
+  existing: PatientAppointmentItem,
+  item: DoctorAppointmentApiItem,
+): PatientAppointmentItem {
+  const next = normalizePatientAppointment(item);
+
+  return {
+    ...next,
+    doctorProfileId: next.doctorProfileId ?? existing.doctorProfileId,
+    doctorName:
+      next.doctorName === "Unknown doctor" &&
+      existing.doctorName !== "Unknown doctor"
+        ? existing.doctorName
+        : next.doctorName,
+    roomLink: next.roomLink ?? existing.roomLink,
+    videoRoomId: next.videoRoomId ?? existing.videoRoomId,
   };
 }
 
@@ -279,6 +310,11 @@ interface AppointmentStoreActions {
   ) => Promise<PatientAppointmentItem[]>;
   confirmAppointment: (appointmentId: number) => Promise<void>;
   rejectAppointment: (appointmentId: number) => Promise<void>;
+  cancelAppointment: (appointmentId: number) => Promise<void>;
+  rescheduleAppointment: (
+    appointmentId: number,
+    payload: RescheduleAppointmentPayload,
+  ) => Promise<void>;
   clearWeekSlots: () => void;
   clearSlotsError: () => void;
   clearBookingError: () => void;
@@ -476,6 +512,87 @@ const useAppointmentStore = create<
     } catch (err) {
       set({ updatingAppointmentId: null });
       throw new Error(getErrorMessage(err, "Failed to reject appointment"));
+    }
+  },
+
+  cancelAppointment: async (appointmentId) => {
+    set({ updatingAppointmentId: appointmentId });
+    try {
+      const { data } = await api.patch<
+        DoctorAppointmentsApiResponse | DoctorAppointmentApiItem
+      >(`/appointments/${appointmentId}/cancel`);
+
+      const items = extractAppointmentsFromResponse(data);
+      const cancelled =
+        items.find((item) => item.id === appointmentId) ?? items[0];
+
+      set((state) => ({
+        updatingAppointmentId: null,
+        patientAppointments:
+          items.length > 1
+            ? items.map((item) => {
+                const existing = state.patientAppointments.find(
+                  (appointment) => appointment.id === item.id,
+                );
+                return existing
+                  ? mergePatientAppointmentUpdate(existing, item)
+                  : normalizePatientAppointment(item);
+              })
+            : state.patientAppointments.map((appointment) =>
+                appointment.id === appointmentId
+                  ? cancelled
+                    ? mergePatientAppointmentUpdate(appointment, cancelled)
+                    : {
+                        ...appointment,
+                        status: "Cancelled" as const,
+                      }
+                  : appointment,
+              ),
+      }));
+    } catch (err) {
+      set({ updatingAppointmentId: null });
+      throw new Error(getErrorMessage(err, "Failed to cancel appointment"));
+    }
+  },
+
+  rescheduleAppointment: async (appointmentId, payload) => {
+    set({ updatingAppointmentId: appointmentId });
+    try {
+      const { data } = await api.patch<
+        DoctorAppointmentsApiResponse | DoctorAppointmentApiItem
+      >(`/appointments/${appointmentId}/reschedule`, payload);
+
+      const items = extractAppointmentsFromResponse(data);
+      const rescheduled =
+        items.find((item) => item.id === appointmentId) ?? items[0];
+
+      set((state) => ({
+        updatingAppointmentId: null,
+        patientAppointments:
+          items.length > 1
+            ? items.map((item) => {
+                const existing = state.patientAppointments.find(
+                  (appointment) => appointment.id === item.id,
+                );
+                return existing
+                  ? mergePatientAppointmentUpdate(existing, item)
+                  : normalizePatientAppointment(item);
+              })
+            : state.patientAppointments.map((appointment) =>
+                appointment.id === appointmentId
+                  ? rescheduled
+                    ? mergePatientAppointmentUpdate(appointment, rescheduled)
+                    : {
+                        ...appointment,
+                        appointmentDate: payload.appointment_date,
+                        startTime: payload.start_time,
+                      }
+                  : appointment,
+              ),
+      }));
+    } catch (err) {
+      set({ updatingAppointmentId: null });
+      throw new Error(getErrorMessage(err, "Failed to reschedule appointment"));
     }
   },
 }));
