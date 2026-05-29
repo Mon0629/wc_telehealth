@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router"
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -57,11 +58,13 @@ function DoctorCard({
   isSelected,
   isAiMatch,
   onSelect,
+  onBookNow,
 }: {
   doctor: DoctorListItem
   isSelected: boolean
   isAiMatch?: boolean
   onSelect: () => void
+  onBookNow: () => void
 }) {
   return (
     <Card
@@ -117,6 +120,7 @@ function DoctorCard({
             >
               <Button
                 size="sm"
+                onClick={onBookNow}
                 className="h-7 flex-1 rounded-lg bg-indigo-500 px-2 text-xs font-medium text-white hover:bg-indigo-600"
               >
                 Book Now
@@ -171,9 +175,11 @@ function DoctorCardSkeleton() {
 function DoctorDetailPanel({
   doctor,
   onClose,
+  onBookNow,
 }: {
   doctor: DoctorListItem
   onClose: () => void
+  onBookNow: () => void
 }) {
   return (
     <aside className="flex w-full shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 lg:w-[360px] xl:w-[400px]">
@@ -259,7 +265,10 @@ function DoctorDetailPanel({
       </div>
 
       <div className="flex gap-3 border-t border-slate-100 p-5">
-        <Button className="h-10 flex-1 rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600">
+        <Button
+          onClick={onBookNow}
+          className="h-10 flex-1 rounded-xl bg-indigo-500 text-sm font-medium text-white hover:bg-indigo-600"
+        >
           Book Now
         </Button>
         <Button
@@ -493,6 +502,7 @@ function AiRecommendationDialog({
 // ─── main page ────────────────────────────────────────────────────────────────
 
 const PatientDoctorDiscovery = () => {
+  const navigate = useNavigate()
   const [search, setSearch] = useState("")
   const [activeFilter, setActiveFilter] = useState("All")
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorListItem | null>(
@@ -500,6 +510,10 @@ const PatientDoctorDiscovery = () => {
   )
   const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const [aiRevealOpen, setAiRevealOpen] = useState(false)
+
+  const handleBookNow = (doctor: DoctorListItem) => {
+    navigate("/patient/appointments", { state: { preselectedDoctor: doctor } })
+  }
 
   const {
     doctors,
@@ -691,6 +705,7 @@ const PatientDoctorDiscovery = () => {
                       isAiFilterActive && recommendedDoctor?.id === doctor.id
                     }
                     onSelect={() => setSelectedDoctor(doctor)}
+                    onBookNow={() => handleBookNow(doctor)}
                   />
                 ))}
               </div>
@@ -746,6 +761,7 @@ const PatientDoctorDiscovery = () => {
           <DoctorDetailPanel
             doctor={selectedDoctor}
             onClose={() => setSelectedDoctor(null)}
+            onBookNow={() => handleBookNow(selectedDoctor)}
           />
         ) : null}
       </div>

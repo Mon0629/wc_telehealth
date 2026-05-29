@@ -1,8 +1,12 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import axios from "axios"
-import api from "@/lib/axios"
 import { buildDoctorProfileFormData } from "@/lib/doctor-profile-payload"
+import {
+  fetchMyProfile,
+  parseMyDoctorProfile,
+  updateMyProfile,
+} from "@/lib/profile-api"
 import { extractAvatarUrlFromProfileResponse } from "@/lib/profile-response"
 import useAuthStore from "@/store/authStore"
 
@@ -58,6 +62,7 @@ interface DoctorProfileState {
   isOpen: boolean
   profile: DoctorProfileDetails
   isLoading: boolean
+  isFetching: boolean
   error: string | null
 }
 
@@ -65,6 +70,7 @@ interface DoctorProfileActions {
   openProfile: () => void
   closeProfile: () => void
   setProfile: (profile: DoctorProfileDetails) => void
+  fetchProfile: () => Promise<DoctorProfileDetails>
   saveProfile: (
     profile: DoctorProfileDetails,
     avatarFile?: File | null
@@ -78,6 +84,7 @@ const useDoctorProfileStore = create<DoctorProfileState & DoctorProfileActions>(
       isOpen: false,
       profile: emptyProfile,
       isLoading: false,
+      isFetching: false,
       error: null,
 
       openProfile: () => set({ isOpen: true }),
@@ -89,20 +96,48 @@ const useDoctorProfileStore = create<DoctorProfileState & DoctorProfileActions>(
         set({ profile: normalizeDoctorProfile(profile) }),
       clearError: () => set({ error: null }),
 
+      fetchProfile: async () => {
+        set({ isFetching: true, error: null })
+        try {
+          const data = await fetchMyProfile()
+          const fetchedProfile = normalizeDoctorProfile(
+            parseMyDoctorProfile(data),
+          )
+          set({ profile: fetchedProfile, isFetching: false })
+          return fetchedProfile
+        } catch (err) {
+          let message = "Could not load profile. Please try again."
+          if (axios.isAxiosError(err)) {
+            message =
+              err.response?.data?.message ??
+              err.response?.data?.error ??
+              message
+          }
+          set({ error: message, isFetching: false })
+          throw err
+        }
+      },
+
       saveProfile: async (profile, avatarFile = null) => {
         set({ isLoading: true, error: null })
         try {
           const formData = buildDoctorProfileFormData(profile, avatarFile)
-          const { data } = await api.put("/profile/me", formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          })
+          const data = await updateMyProfile(formData)
 
+          const parsed = parseMyDoctorProfile(data)
           const cloudinaryAvatarUrl =
-            extractAvatarUrlFromProfileResponse(data) ?? profile.avatarUrl
+            extractAvatarUrlFromProfileResponse(data) ??
+            parsed.avatarUrl ??
+            profile.avatarUrl
 
           const savedProfile = normalizeDoctorProfile({
             ...profile,
-            avatarUrl: cloudinaryAvatarUrl,
+            ...parsed,
+            avatarUrl: cloudinaryAvatarUrl || parsed.avatarUrl || profile.avatarUrl,
+            availability:
+              parsed.availability.length > 0
+                ? parsed.availability
+                : profile.availability,
           })
 
           set({ profile: savedProfile, isLoading: false })
