@@ -2,8 +2,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/lib/axios";
 import axios from "axios";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { parseAuthResponse } from "@/lib/auth-response";
-import { setAccessToken, setRefreshToken } from "@/lib/auth-token";
+import { clearStoredTokens, setAccessToken, setRefreshToken } from "@/lib/auth-token";
 import { disconnectSocket } from "@/lib/socket";
 import { clearBeams } from "@/lib/pusherBeams";
 
@@ -84,13 +85,10 @@ const useAuthStore = create<AuthState & AuthActions>()(
             isLoading: false,
           });
         } catch (err) {
-          let message = "Invalid credentials. Please try again.";
-          if (axios.isAxiosError(err)) {
-            message =
-              err.response?.data?.message ??
-              err.response?.data?.error ??
-              message;
-          }
+          const message = getApiErrorMessage(
+            err,
+            "Invalid email or password. Please try again."
+          );
           set({ error: message, isLoading: false, isAuthenticated: false });
           throw err;
         }
@@ -102,13 +100,10 @@ const useAuthStore = create<AuthState & AuthActions>()(
           await api.post("/auth/register", payload);
           set({ isLoading: false, pendingVerificationEmail: payload.email });
         } catch (err) {
-          let message = "Signup failed. Please try again.";
-          if (axios.isAxiosError(err)) {
-            message =
-              err.response?.data?.message ??
-              err.response?.data?.error ??
-              message;
-          }
+          const message = getApiErrorMessage(
+            err,
+            "Signup failed. Please try again."
+          );
           set({ error: message, isLoading: false });
           throw err;
         }
@@ -170,8 +165,7 @@ const useAuthStore = create<AuthState & AuthActions>()(
         clearBeams();
         disconnectSocket();
 
-        setAccessToken(null);
-        setRefreshToken(null);
+        clearStoredTokens();
         set({
           user: null,
           accessToken: null,

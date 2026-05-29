@@ -43,9 +43,13 @@ export default function VideoCallPage() {
 
   if (!parsedAppointmentId) {
     return (
-      <div className="flex h-svh flex-col items-center justify-center gap-4 p-6">
-        <p className="text-sm text-slate-600">Invalid appointment.</p>
-        <Button variant="outline" onClick={handleLeave}>
+      <div className="flex h-svh flex-col items-center justify-center gap-4 bg-zinc-50 p-6">
+        <p className="text-sm text-zinc-600">Invalid appointment.</p>
+        <Button
+          variant="outline"
+          onClick={handleLeave}
+          className="border-zinc-200"
+        >
           Go back
         </Button>
       </div>
@@ -53,19 +57,21 @@ export default function VideoCallPage() {
   }
 
   return (
-    <div className="flex h-svh flex-col bg-slate-950">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-800 px-4">
+    <div className="flex h-svh flex-col bg-zinc-100 text-zinc-900">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-4">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={handleLeave}
-          className="text-slate-200 hover:bg-slate-800 hover:text-white"
+          className="text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
         >
           <ArrowLeftIcon className="size-4" />
           Leave
         </Button>
-        <span className="text-sm text-slate-400">Video consultation</span>
+        <span className="text-sm font-medium text-zinc-500">
+          Video consultation
+        </span>
       </header>
 
       <main
@@ -76,7 +82,7 @@ export default function VideoCallPage() {
       >
         <div
           className={cn(
-            "min-h-0 min-w-0",
+            "min-h-0 min-w-0 bg-zinc-100",
             isDoctor ? "min-h-[50vh] flex-1 lg:min-h-0" : "h-full w-full",
           )}
         >

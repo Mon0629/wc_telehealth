@@ -118,9 +118,7 @@ export default function EmailVerification() {
       }
 
       await verifyEmailOtp({ email, otp: otpValue });
-      toast.success("Account Created");
-      const role = useAuthStore.getState().user?.role;
-      navigate(role === "PATIENT" ? "/patient-dashboard" : "/doctor-dashboard");
+      navigate("/verification-success");
     } catch {
       toast.error(
         useAuthStore.getState().error ?? "Invalid code. Please try again."

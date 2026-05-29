@@ -4,6 +4,7 @@ import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
 import RoleSelector from "@/pages/auth/role-seletor";
 import EmailVerification from "@/pages/auth/email-verification";
+import VerificationSuccess from "@/pages/auth/verification-success";
 import PatientDashboard from "@/pages/patient/patient-dashboard";
 import DoctorDashboard from "@/pages/doctor/doctor-dashboard";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -74,6 +75,7 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/register" element={<RoleSelector />} />
       <Route path="/email-verification" element={<EmailVerification />} />
+      <Route path="/verification-success" element={<VerificationSuccess />} />
 
       <Route element={<AuthLayout />}>
         <Route path="/call/:appointmentId" element={<VideoCallPage />} />

@@ -22,9 +22,30 @@ export function setAccessToken(token: string | null): void {
   else localStorage.removeItem(ACCESS_KEY);
 }
 
+export function getRefreshToken(): string | null {
+  const direct = localStorage.getItem(REFRESH_KEY);
+  if (direct) return direct;
+
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      state?: { refreshToken?: string | null };
+    };
+    return parsed.state?.refreshToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function setRefreshToken(token: string | null): void {
   if (token) localStorage.setItem(REFRESH_KEY, token);
   else localStorage.removeItem(REFRESH_KEY);
+}
+
+export function clearStoredTokens(): void {
+  localStorage.removeItem(ACCESS_KEY);
+  localStorage.removeItem(REFRESH_KEY);
 }
 
 /** After Zustand rehydrate, mirror tokens so axios can attach Authorization. */
