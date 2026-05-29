@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DAYS_OF_WEEK } from "@/lib/doctor-profile-payload"
@@ -85,6 +86,7 @@ function getDayLabel(day: DayOfWeek): string {
 export function WeeklyAvailabilitySchedule() {
   const profile = useDoctorProfileStore((state) => state.profile)
   const isSaving = useDoctorProfileStore((state) => state.isLoading)
+  const isFetching = useDoctorProfileStore((state) => state.isFetching)
   const saveProfile = useDoctorProfileStore((state) => state.saveProfile)
 
   const [schedule, setSchedule] = useState<WeekSchedule>(() =>
@@ -145,6 +147,13 @@ export function WeeklyAvailabilitySchedule() {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-2 p-3">
+        {isFetching ? (
+          <div className="flex flex-col gap-2 py-1">
+            {Array.from({ length: 7 }).map((_, index) => (
+              <Skeleton key={index} className="h-8 w-full rounded-md" />
+            ))}
+          </div>
+        ) : (
         <ul className="flex flex-col divide-y divide-slate-100">
           {DAYS_OF_WEEK.map(({ value, label }) => {
             const row = schedule[value]
@@ -203,10 +212,11 @@ export function WeeklyAvailabilitySchedule() {
             )
           })}
         </ul>
+        )}
 
         <Button
           type="button"
-          disabled={isSaving}
+          disabled={isSaving || isFetching}
           onClick={() => {
             handleSave().catch(() => undefined)
           }}

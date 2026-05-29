@@ -12,10 +12,12 @@ import MyAppointments from "@/pages/patient/patient-appointments";
 import MyMedicalRecords from "@/pages/patient/patient-medical-records";
 import DoctorAppointments from "@/pages/doctor/doctor-appointments";
 import DoctorPatients from "@/pages/doctor/doctor-patients";
+import NotificationsPage from "@/pages/notifications";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useAuthStore from "@/store/authStore";
 import VideoCallPage from "@/pages/video-call";
+import { SocketNotificationProvider } from "@/components/SocketNotificationProvider";
 
 function AuthLayout() {
   const { isAuthenticated, user } = useAuthStore();
@@ -24,7 +26,11 @@ function AuthLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <SocketNotificationProvider>
+      <Outlet />
+    </SocketNotificationProvider>
+  );
 }
 
 function ProtectedLayout() {
@@ -35,14 +41,16 @@ function ProtectedLayout() {
   }
 
   return (
-    <TooltipProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <Outlet />
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <SocketNotificationProvider>
+      <TooltipProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <Outlet />
+          </SidebarInset>
+        </SidebarProvider>
+      </TooltipProvider>
+    </SocketNotificationProvider>
   );
 }
 
@@ -77,12 +85,14 @@ export default function App() {
           <Route path="/patient/doctor-discovery" element={<DoctorDiscovery />} />
           <Route path="/patient/appointments" element={<MyAppointments />} />
           <Route path="/patient/medical-records" element={<MyMedicalRecords />} />
+          <Route path="/patient/notifications" element={<NotificationsPage />} />
         </Route>
 
         <Route element={<RoleGuard allowed="DOCTOR" />}>
           <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
           <Route path="/doctor/patients" element={<DoctorPatients />} />
           <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+          <Route path="/doctor/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
 

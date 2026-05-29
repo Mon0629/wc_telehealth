@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useNavigate } from "react-router"
 import {
   Avatar,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/sidebar"
 import { ChevronsUpDownIcon, BadgeCheckIcon, BellIcon, LogOutIcon } from "lucide-react"
 import useAuthStore from "@/store/authStore"
+import useNotificationStore from "@/store/notificationStore"
 
 function getInitials(name: string): string {
   return name
@@ -33,6 +35,7 @@ function getInitials(name: string): string {
 
 export function NavUser({
   user,
+  notificationsPath,
   onAccountClick,
 }: {
   user: {
@@ -40,13 +43,28 @@ export function NavUser({
     email: string
     avatar: string
   }
+  notificationsPath: string
   onAccountClick?: () => void
 }) {
   const { isMobile } = useSidebar()
   const { logout } = useAuthStore()
   const navigate = useNavigate()
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
+  const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount)
 
   const initials = getInitials(user.name) || user.email.slice(0, 2).toUpperCase()
+
+  useEffect(() => {
+    fetchUnreadCount().catch(() => undefined)
+  }, [fetchUnreadCount])
+
+  useEffect(() => {
+    const onFocus = () => {
+      fetchUnreadCount().catch(() => undefined)
+    }
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [fetchUnreadCount])
 
   const handleLogout = () => {
     logout()
@@ -102,9 +120,16 @@ export function NavUser({
                 <BadgeCheckIcon />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => navigate(notificationsPath)}
+              >
                 <BellIcon />
-                Notifications
+                <span className="flex-1">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="ml-auto rounded-full bg-sky-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

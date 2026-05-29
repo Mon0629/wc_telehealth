@@ -77,6 +77,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const isDoctor = user?.role === "DOCTOR"
   const navItems = isDoctor ? doctorNav : patientNav
+  const notificationsPath = isDoctor
+    ? "/doctor/notifications"
+    : "/patient/notifications"
 
   const displayName = user
     ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email
@@ -125,6 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             email: user?.email ?? "",
             avatar: isDoctor ? doctorAvatarUrl : patientAvatarUrl,
           }}
+          notificationsPath={notificationsPath}
           onAccountClick={isDoctor ? openDoctorProfile : openPatientProfile}
         />
       </SidebarFooter>

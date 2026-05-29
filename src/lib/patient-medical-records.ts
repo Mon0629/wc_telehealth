@@ -1,5 +1,8 @@
 import axios from "axios"
 import api from "@/lib/axios"
+import { fetchMyProfile } from "@/lib/profile-api"
+import { extractPatientProfileIdFromApi } from "@/lib/patient-profile-response"
+import usePatientProfileStore from "@/store/patientProfileStore"
 import type { ConsultationNotesForm } from "@/lib/consultation-notes"
 import type { PrescriptionItem } from "@/lib/prescription"
 
@@ -58,39 +61,6 @@ function extractArray<T>(payload: T[] | { data: T[] } | unknown): T[] {
     if (Array.isArray(data)) return data as T[]
   }
   return []
-}
-
-function readProfileId(profile: Record<string, unknown>): number | null {
-  const id = profile.id
-  if (typeof id === "number" && Number.isFinite(id)) return id
-  if (typeof id === "string" && id.trim()) {
-    const parsed = Number(id)
-    return Number.isFinite(parsed) ? parsed : null
-  }
-  return null
-}
-
-function extractPatientProfileId(profileResponse: unknown): number | null {
-  if (!profileResponse || typeof profileResponse !== "object") return null
-
-  const root = profileResponse as Record<string, unknown>
-
-  if (root.patientProfile && typeof root.patientProfile === "object") {
-    return readProfileId(root.patientProfile as Record<string, unknown>)
-  }
-
-  if (root.user && typeof root.user === "object") {
-    const user = root.user as Record<string, unknown>
-    if (user.patientProfile && typeof user.patientProfile === "object") {
-      return readProfileId(user.patientProfile as Record<string, unknown>)
-    }
-  }
-
-  if (root.data && typeof root.data === "object") {
-    return extractPatientProfileId(root.data)
-  }
-
-  return null
 }
 
 export function formatDoctorDisplayName(name: string | null | undefined): string {
@@ -229,11 +199,26 @@ export function buildMedicalRecordRows(
 }
 
 export async function fetchMyPatientProfileId(): Promise<number> {
-  const { data } = await api.get<unknown>("/profile/me")
-  const profileId = extractPatientProfileId(extractPayload(data))
+  const store = usePatientProfileStore.getState()
+  if (store.profile.profileId) return store.profile.profileId
+
+  try {
+    const profile = await store.fetchProfile()
+    if (profile.profileId) return profile.profileId
+  } catch {
+    // Fall through to a direct /profile/me parse.
+  }
+
+  const data = await fetchMyProfile()
+  const profileId = extractPatientProfileIdFromApi(data)
   if (!profileId) {
     throw new Error("Patient profile not found")
   }
+
+  usePatientProfileStore.setState((state) => ({
+    profile: { ...state.profile, profileId },
+  }))
+
   return profileId
 }
 

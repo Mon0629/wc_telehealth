@@ -6,6 +6,7 @@ import {
   useState,
   type ComponentProps,
 } from "react"
+import { useLocation } from "react-router"
 import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
 import {
@@ -230,6 +231,8 @@ function AppointmentDoctorCardSkeleton() {
 }
 
 const PatientAppointments = () => {
+  const location = useLocation()
+
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorListItem | null>(
     null,
   )
@@ -331,6 +334,14 @@ const PatientAppointments = () => {
   useEffect(() => {
     fetchPatientAppointments(1).catch(() => undefined)
   }, [fetchPatientAppointments])
+
+  useEffect(() => {
+    const state = location.state as { preselectedDoctor?: DoctorListItem } | null
+    if (state?.preselectedDoctor) {
+      setSelectedDoctor(state.preselectedDoctor)
+      window.history.replaceState({}, "")
+    }
+  }, [location.state])
 
   useEffect(() => {
     if (!selectedDate) return

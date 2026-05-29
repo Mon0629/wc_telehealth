@@ -115,6 +115,9 @@ export interface PatientAppointmentItem {
   status: DoctorAppointmentStatus;
 }
 
+/** Backend caps `limit` at 50; requests above that return 400. */
+export const APPOINTMENTS_LIST_MAX_LIMIT = 50;
+
 export function formatTime24ToDisplay(time: string) {
   const [hourPart, minutePart = "00"] = time.split(":");
   const hour = Number(hourPart);
