@@ -338,8 +338,16 @@ function SectionHeading({
 
 export function DoctorProfileModal() {
   const { user, isFirstLogin, completeFirstLogin } = useAuthStore()
-  const { isOpen, closeProfile, profile, saveProfile, isLoading, clearError } =
-    useDoctorProfileStore()
+  const {
+    isOpen,
+    closeProfile,
+    profile,
+    saveProfile,
+    fetchProfile,
+    isLoading,
+    isFetching,
+    clearError,
+  } = useDoctorProfileStore()
 
   const [form, setForm] = useState<DoctorProfileDetails>(() =>
     normalizeDoctorProfile(profile),
@@ -347,12 +355,21 @@ export function DoctorProfileModal() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   useEffect(() => {
-    if (isOpen) {
-      setForm(normalizeDoctorProfile(profile))
-      setAvatarFile(null)
-      clearError()
-    }
-  }, [isOpen, profile, clearError])
+    if (!isOpen && !isFirstLogin) return
+
+    clearError()
+    fetchProfile()
+      .then((fetchedProfile) => {
+        setForm(normalizeDoctorProfile(fetchedProfile))
+        setAvatarFile(null)
+      })
+      .catch(() => {
+        setForm(
+          normalizeDoctorProfile(useDoctorProfileStore.getState().profile),
+        )
+        setAvatarFile(null)
+      })
+  }, [isOpen, isFirstLogin, fetchProfile, clearError])
 
   const updateField = <K extends keyof DoctorProfileDetails>(
     key: K,
@@ -594,7 +611,7 @@ export function DoctorProfileModal() {
                 variant="outline"
                 className="rounded-full border-slate-200"
                 onClick={closeProfile}
-                disabled={isLoading}
+                disabled={isLoading || isFetching}
               >
                 Cancel
               </Button>
@@ -602,13 +619,15 @@ export function DoctorProfileModal() {
             <Button
               type="submit"
               className="rounded-full bg-sky-600 text-white hover:bg-sky-700"
-              disabled={isLoading}
+              disabled={isLoading || isFetching}
             >
               {isLoading
                 ? "Saving…"
-                : isFirstLogin
-                  ? "Complete profile"
-                  : "Save profile"}
+                : isFetching
+                  ? "Loading…"
+                  : isFirstLogin
+                    ? "Complete profile"
+                    : "Save profile"}
             </Button>
           </DialogFooter>
         </form>

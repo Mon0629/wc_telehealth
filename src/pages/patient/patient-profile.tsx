@@ -164,8 +164,16 @@ function SectionHeading({
 
 export function PatientProfileModal() {
   const { user, isFirstLogin, completeFirstLogin } = useAuthStore()
-  const { isOpen, closeProfile, profile, saveProfile, isLoading, clearError } =
-    usePatientProfileStore()
+  const {
+    isOpen,
+    closeProfile,
+    profile,
+    saveProfile,
+    fetchProfile,
+    isLoading,
+    isFetching,
+    clearError,
+  } = usePatientProfileStore()
 
   const [form, setForm] = useState<PatientProfileDetails>(() =>
     normalizePatientProfile(profile),
@@ -173,17 +181,32 @@ export function PatientProfileModal() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   useEffect(() => {
-    if (isOpen) {
-      setForm(
-        normalizePatientProfile({
-          ...profile,
-          phone: profile.phone || user?.phone || "",
-        }),
-      )
-      setAvatarFile(null)
-      clearError()
-    }
-  }, [isOpen, profile, user?.phone, clearError])
+    if (!isOpen && !isFirstLogin) return
+
+    clearError()
+    fetchProfile()
+      .then((fetchedProfile) => {
+        setForm(
+          normalizePatientProfile({
+            ...fetchedProfile,
+            phone: fetchedProfile.phone || user?.phone || "",
+          }),
+        )
+        setAvatarFile(null)
+      })
+      .catch(() => {
+        setForm(
+          normalizePatientProfile({
+            ...usePatientProfileStore.getState().profile,
+            phone:
+              usePatientProfileStore.getState().profile.phone ||
+              user?.phone ||
+              "",
+          }),
+        )
+        setAvatarFile(null)
+      })
+  }, [isOpen, isFirstLogin, fetchProfile, clearError, user?.phone])
 
   const updateField = <K extends keyof PatientProfileDetails>(
     key: K,
@@ -434,7 +457,7 @@ export function PatientProfileModal() {
                 variant="outline"
                 className="rounded-full border-slate-200"
                 onClick={closeProfile}
-                disabled={isLoading}
+                disabled={isLoading || isFetching}
               >
                 Cancel
               </Button>
@@ -442,13 +465,15 @@ export function PatientProfileModal() {
             <Button
               type="submit"
               className="rounded-full bg-sky-600 text-white hover:bg-sky-700"
-              disabled={isLoading}
+              disabled={isLoading || isFetching}
             >
               {isLoading
                 ? "Saving…"
-                : isFirstLogin
-                  ? "Complete profile"
-                  : "Save profile"}
+                : isFetching
+                  ? "Loading…"
+                  : isFirstLogin
+                    ? "Complete profile"
+                    : "Save profile"}
             </Button>
           </DialogFooter>
         </form>

@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 import api from "@/lib/axios";
 import axios from "axios";
 import { parseAuthResponse } from "@/lib/auth-response";
+import { setAccessToken, setRefreshToken } from "@/lib/auth-token";
+import { disconnectSocket } from "@/lib/socket";
 
 export interface User {
   id: number;
@@ -69,9 +71,8 @@ const useAuthStore = create<AuthState & AuthActions>()(
             throw new Error("Missing accessToken in login response.");
           }
 
-          // Sync to localStorage so the axios interceptor can read it
-          localStorage.setItem("accessToken", accessToken);
-          if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+          setAccessToken(accessToken);
+          setRefreshToken(refreshToken ?? null);
 
           set({
             user,
@@ -123,8 +124,8 @@ const useAuthStore = create<AuthState & AuthActions>()(
             throw new Error("Missing accessToken in verification response.");
           }
 
-          localStorage.setItem("accessToken", accessToken);
-          if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+          setAccessToken(accessToken);
+          setRefreshToken(refreshToken ?? null);
 
           set({
             user,
@@ -159,8 +160,10 @@ const useAuthStore = create<AuthState & AuthActions>()(
       },
 
       logout: () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        disconnectSocket();
+
+        setAccessToken(null);
+        setRefreshToken(null);
         set({
           user: null,
           accessToken: null,
@@ -187,6 +190,22 @@ const useAuthStore = create<AuthState & AuthActions>()(
         isFirstLogin: state.isFirstLogin,
         pendingVerificationEmail: state.pendingVerificationEmail,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          setAccessToken(state.accessToken);
+          if (state.refreshToken) setRefreshToken(state.refreshToken);
+          return;
+        }
+        // Stale session: flagged logged-in but no token
+        if (state?.isAuthenticated) {
+          useAuthStore.setState({
+            isAuthenticated: false,
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+          });
+        }
+      },
     }
   )
 );
