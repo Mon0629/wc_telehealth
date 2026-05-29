@@ -302,11 +302,11 @@ function AiRecommendationRevealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-sm gap-0 overflow-visible border-0 bg-transparent p-0 shadow-none sm:max-w-sm"
+        overlayClassName="bg-zinc-900/20"
         showCloseButton={false}
       >
         <div className="relative mx-auto w-full max-w-[340px]">
-          <div className="absolute -inset-1 rounded-[1.35rem] bg-zinc-400/40 blur-sm" />
-          <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+          <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl">
             <div className="border-b border-zinc-200 bg-zinc-900 px-4 py-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold tracking-widest text-white uppercase">
@@ -319,9 +319,8 @@ function AiRecommendationRevealDialog({
               </div>
             </div>
 
-            <div className="relative px-4 pt-4 pb-2">
-              <div className="absolute inset-x-8 top-6 h-32 rounded-full bg-zinc-200/60 blur-2xl" />
-              <div className="relative mx-auto w-fit rounded-2xl border-4 border-white bg-white p-1 shadow-lg ring-2 ring-zinc-200">
+            <div className="relative bg-zinc-50 px-4 pt-4 pb-2">
+              <div className="relative mx-auto w-fit rounded-2xl border-4 border-white bg-white p-1 shadow-md ring-2 ring-zinc-200">
                 <img
                   src={doctor.avatar}
                   alt={doctor.name}
@@ -446,7 +445,10 @@ function AiRecommendationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md gap-0 p-0 sm:max-w-md">
+      <DialogContent
+        className="max-w-md gap-0 p-0 sm:max-w-md"
+        overlayClassName="bg-zinc-900/20"
+      >
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>AI Recommendation</DialogTitle>
           <DialogDescription>

@@ -1111,7 +1111,7 @@ const PatientAppointments = () => {
       >
         <DialogContent
           showCloseButton={false}
-          overlayClassName="bg-zinc-900/20 backdrop-blur-sm"
+          overlayClassName="bg-zinc-900/20"
           className="max-w-md gap-0 overflow-hidden rounded-lg border-zinc-200 p-0 shadow-lg sm:max-w-md"
         >
           <DialogHeader className="space-y-2 border-0 px-6 pt-6 pb-0 pr-6">

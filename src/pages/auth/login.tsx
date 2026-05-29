@@ -14,13 +14,15 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import AuthPasswordInput from "@/components/auth/PasswordInputWithToggle";
 import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api-error";
 import useAuthStore from "@/store/authStore";
 import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, clearError } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,10 +34,11 @@ export default function Login() {
       await login(email, password);
       const role = useAuthStore.getState().user?.role;
       navigate(role === "PATIENT" ? "/patient-dashboard" : "/doctor-dashboard");
-    } catch {
+    } catch (err) {
       const message =
-        useAuthStore.getState().error ?? "Invalid credentials. Please try again.";
-      toast.error(message);
+        useAuthStore.getState().error ??
+        getApiErrorMessage(err, "Invalid email or password. Please try again.");
+      toast.error("Sign in failed", { description: message });
     }
   };
 
@@ -86,13 +89,11 @@ export default function Login() {
                       Forgot your password?
                     </a>
                   </div>
-                  <Input
+                  <AuthPasswordInput
                     id="password"
-                    type="password"
                     placeholder="Your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 rounded-full border-zinc-200 bg-zinc-50 px-5 text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
+                    onChange={setPassword}
                     required
                     disabled={isLoading}
                   />

@@ -82,7 +82,7 @@ export function RescheduleAppointmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={!isSubmitting}
-        overlayClassName="bg-zinc-900/20 backdrop-blur-sm"
+        overlayClassName="bg-zinc-900/20"
         className="flex max-h-[min(92dvh,720px)] w-[min(100vw-2rem,56rem)] max-w-none flex-col gap-0 overflow-hidden rounded-lg border-zinc-200 p-0 sm:w-[min(100vw-2rem,56rem)]"
       >
         <DialogHeader className="shrink-0 space-y-1 border-b border-zinc-200 px-6 py-5">

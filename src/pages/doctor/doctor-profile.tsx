@@ -433,6 +433,7 @@ export function DoctorProfileModal() {
     <Dialog open={dialogOpen} onOpenChange={(open) => !open && handleDismiss()}>
       <DialogContent
         className="max-w-xl p-0"
+        overlayClassName="bg-zinc-900/20"
         showCloseButton={!isFirstLogin}
         onInteractOutside={(e) => isFirstLogin && e.preventDefault()}
         onEscapeKeyDown={(e) => isFirstLogin && e.preventDefault()}

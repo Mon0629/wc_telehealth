@@ -1,0 +1,37 @@
+/* Zinc theme overrides for ZegoUIKitPrebuilt in-call UI (scoped to our container). */
+.zego-room-container {
+  --zego-primary: #18181b;
+  --zego-primary-hover: #27272a;
+  --zego-surface: #fafafa;
+  --zego-surface-muted: #f4f4f5;
+  --zego-border: #e4e4e7;
+  --zego-text: #18181b;
+  --zego-text-muted: #71717a;
+  background-color: #09090b !important;
+}
+
+.zego-room-container * {
+  font-family: inherit;
+}
+
+.zego-room-container button,
+.zego-room-container [role="button"] {
+  border-radius: 0.75rem !important;
+}
+
+.zego-room-container button[class*="primary"],
+.zego-room-container button[style*="background-color: rgb(0, 110, 255)"],
+.zego-room-container button[style*="background-color:#006eff"],
+.zego-room-container button[style*="background: rgb(0, 110, 255)"],
+.zego-room-container button[style*="background:#006eff"] {
+  background-color: var(--zego-primary) !important;
+  border-color: var(--zego-primary) !important;
+  color: #fff !important;
+}
+
+.zego-room-container button[class*="primary"]:hover,
+.zego-room-container button[style*="background-color: rgb(0, 110, 255)"]:hover,
+.zego-room-container button[style*="background-color:#006eff"]:hover {
+  background-color: var(--zego-primary-hover) !important;
+  border-color: var(--zego-primary-hover) !important;
+}
