@@ -15,6 +15,17 @@ import DoctorPatients from "@/pages/doctor/doctor-patients";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useAuthStore from "@/store/authStore";
+import VideoCallPage from "@/pages/video-call";
+
+function AuthLayout() {
+  const { isAuthenticated, user } = useAuthStore();
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+}
 
 function ProtectedLayout() {
   const { isAuthenticated, user } = useAuthStore();
@@ -55,6 +66,10 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/register" element={<RoleSelector />} />
       <Route path="/email-verification" element={<EmailVerification />} />
+
+      <Route element={<AuthLayout />}>
+        <Route path="/call/:appointmentId" element={<VideoCallPage />} />
+      </Route>
 
       <Route element={<ProtectedLayout />}>
         <Route element={<RoleGuard allowed="PATIENT" />}>

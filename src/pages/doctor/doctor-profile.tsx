@@ -390,7 +390,7 @@ export function DoctorProfileModal() {
       setAvatarFile(null)
 
       if (isFirstLogin) {
-        completeFirstLogin()
+        await completeFirstLogin()
         toast.success("Profile completed! You can now use Konsultify.")
       } else {
         toast.success("Profile updated successfully.")
