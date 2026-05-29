@@ -523,7 +523,7 @@ const PatientAppointments = () => {
         const isAvailable =
           Boolean(selectedDoctor) &&
           isMonthWithinBookingWindow(displayMonth) &&
-          Boolean(matchedDay) &&
+          matchedDay != null &&
           availableDaysOfWeek.includes(matchedDay.apiNumber)
 
         return (

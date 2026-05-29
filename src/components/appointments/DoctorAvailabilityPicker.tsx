@@ -157,7 +157,7 @@ export function DoctorAvailabilityPicker({
         const isAvailable =
           hasDoctor &&
           isMonthWithinBookingWindow(displayMonth) &&
-          Boolean(matchedDay) &&
+          matchedDay != null &&
           availableDaysOfWeek.includes(matchedDay.apiNumber)
 
         return (
