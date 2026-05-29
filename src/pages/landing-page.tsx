@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Users,
   Calendar,
-  MessageSquare,
   Stethoscope,
   HeartPulse,
   Activity,

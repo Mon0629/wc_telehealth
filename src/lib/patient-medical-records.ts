@@ -47,13 +47,6 @@ export interface PatientMedicalRecordRow {
   prescription: PrescriptionItem[] | null
 }
 
-function extractPayload<T>(payload: T | { data: T }): T {
-  if (payload && typeof payload === "object" && "data" in payload) {
-    return (payload as { data: T }).data
-  }
-  return payload as T
-}
-
 function extractArray<T>(payload: T[] | { data: T[] } | unknown): T[] {
   if (Array.isArray(payload)) return payload
   if (payload && typeof payload === "object" && "data" in payload) {
