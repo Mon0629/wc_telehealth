@@ -17,13 +17,16 @@ import {
   VideoIcon,
 } from "lucide-react"
 
+import { RecentNotificationsCard } from "@/components/notifications/RecentNotificationsCard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
+import { waitForAuthHydration } from "@/lib/auth-hydration"
 import useAuthStore from "@/store/authStore"
 import useAppointmentStore, {
+  APPOINTMENTS_LIST_MAX_LIMIT,
   formatTime24ToDisplay,
   type DoctorAppointmentStatus,
   type PatientAppointmentItem,
@@ -182,22 +185,6 @@ function TodayDateStripCard({
   )
 }
 
-function RecentNotificationsCard({ className }: { className?: string }) {
-  return (
-    <Card
-      className={cn(
-        "flex h-full min-h-[280px] flex-col gap-0 border-0 bg-white py-0 shadow-sm ring-1 ring-slate-100",
-        className,
-      )}
-    >
-      <CardContent className="flex h-full flex-col p-4 sm:p-5">
-        <h3 className="text-base font-bold text-slate-900">Recent notification</h3>
-        <p className="mt-3 text-sm text-slate-500">No new notifications</p>
-      </CardContent>
-    </Card>
-  )
-}
-
 function UpcomingAppointmentsSkeleton() {
   return (
     <div className="space-y-3">
@@ -220,7 +207,21 @@ export default function PatientDashboard() {
   )
 
   useEffect(() => {
-    fetchPatientAppointments(1, 100).catch(() => undefined)
+    let cancelled = false
+
+    void (async () => {
+      await waitForAuthHydration()
+      if (cancelled) return
+      try {
+        await fetchPatientAppointments(1, APPOINTMENTS_LIST_MAX_LIMIT)
+      } catch {
+        // Errors are stored on the appointment store.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [fetchPatientAppointments])
 
   const displayName =
@@ -278,10 +279,10 @@ export default function PatientDashboard() {
         <span className="text-sm font-medium text-slate-700">Dashboard</span>
       </header>
 
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-5">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
-          <div className="flex min-w-0 flex-col gap-6 lg:w-3/4">
-            <div className="flex flex-col gap-5 overflow-visible lg:flex-row lg:items-stretch">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden p-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-stretch">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 lg:w-3/4">
+            <div className="flex shrink-0 flex-col gap-5 overflow-visible lg:flex-row lg:items-stretch">
               <Card className="relative flex h-full w-full min-w-0 flex-2 gap-0 overflow-visible border-0 bg-linear-to-br from-blue-600 via-blue-500 to-blue-700 py-0 shadow-lg ring-0">
                 <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.12),transparent_60%)]" />
                 <CardContent className="relative overflow-visible p-4 pr-20 sm:p-5 sm:pr-24 lg:pr-28">
@@ -320,8 +321,8 @@ export default function PatientDashboard() {
               </div>
             </div>
 
-            <section className="w-full">
-              <div className="mb-4 flex items-center justify-between">
+            <section className="flex min-h-0 flex-1 flex-col">
+              <div className="mb-4 flex shrink-0 items-center justify-between">
                 <h2 className="text-base font-semibold text-slate-900">
                   Upcoming Appointments
                 </h2>
@@ -332,41 +333,46 @@ export default function PatientDashboard() {
                 ) : null}
               </div>
 
-              {isLoading ? (
-                <UpcomingAppointmentsSkeleton />
-              ) : upcomingAppointments.length > 0 ? (
-                <div className="space-y-3">
-                  {upcomingAppointments.map((appointment) => (
-                    <UpcomingAppointmentCard
-                      key={appointment.id}
-                      appointment={appointment}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white py-14 text-center">
-                  <CalendarClockIcon className="mb-3 size-10 text-slate-300" />
-                  <p className="text-sm font-medium text-slate-700">
-                    No upcoming appointments
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Book an appointment to see your consultations here.
-                  </p>
-                </div>
-              )}
-
-              {upcomingAppointments.length > 0 && (
-                <div className="mt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/patient/appointments")}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
-                  >
-                    See all appointments
-                    <ChevronRightIcon className="size-4" />
-                  </button>
-                </div>
-              )}
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                {isLoading ? (
+                  <div className="p-4">
+                    <UpcomingAppointmentsSkeleton />
+                  </div>
+                ) : upcomingAppointments.length > 0 ? (
+                  <>
+                    <div className="flex-1 overflow-y-auto p-4">
+                      <div className="space-y-3">
+                        {upcomingAppointments.slice(0, 3).map((appointment) => (
+                          <UpcomingAppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="shrink-0 border-t border-slate-100 p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/patient/appointments")}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                      >
+                        See all appointments
+                        <ChevronRightIcon className="size-4" />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl p-8 text-center">
+                    <CalendarClockIcon className="mb-3 size-10 text-slate-300" />
+                    <p className="text-sm font-medium text-slate-700">
+                      No upcoming appointments
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Book an appointment to see your consultations here.
+                    </p>
+                  </div>
+                )}
+              </div>
             </section>
           </div>
 
