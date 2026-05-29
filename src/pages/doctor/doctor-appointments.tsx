@@ -1,11 +1,17 @@
 import { useEffect } from "react"
 import { format, parseISO } from "date-fns"
+import { CheckIcon, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   Table,
   TableBody,
@@ -14,31 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { AppointmentStatusBadge } from "@/components/appointments/AppointmentStatusBadge"
 import { WeeklyAvailabilitySchedule } from "@/components/doctor/WeeklyAvailabilitySchedule"
 import { JoinRoomLink } from "@/components/video/JoinRoomLink"
-import { cn } from "@/lib/utils"
 import useAppointmentStore, {
   formatTime24ToDisplay,
   type DoctorAppointmentItem,
-  type DoctorAppointmentStatus,
 } from "@/store/appointmentStore"
-
-function StatusBadge({ status }: { status: DoctorAppointmentStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-        status === "Confirmed" && "bg-emerald-100 text-emerald-700",
-        status === "Pending" && "bg-amber-100 text-amber-700",
-        status === "Denied" && "bg-red-100 text-red-700",
-        status === "Completed" && "bg-sky-100 text-sky-700",
-        status === "Cancelled" && "bg-slate-100 text-slate-600",
-      )}
-    >
-      {status}
-    </span>
-  )
-}
 
 function formatAppointmentDate(date: string) {
   try {
@@ -52,7 +40,7 @@ function AppointmentTableSkeleton() {
   return (
     <>
       {Array.from({ length: 5 }).map((_, index) => (
-        <TableRow key={index} className="border-slate-100">
+        <TableRow key={index} className="border-zinc-200">
           <TableCell className="px-4 py-3">
             <Skeleton className="h-4 w-32" />
           </TableCell>
@@ -89,30 +77,42 @@ function AppointmentActions({
   onDeny: () => void
 }) {
   if (appointment.status !== "Pending") {
-    return <span className="text-sm text-slate-400">—</span>
+    return <span className="text-sm text-zinc-400">—</span>
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        type="button"
-        size="sm"
-        disabled={isUpdating}
-        onClick={onConfirm}
-        className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700"
-      >
-        Confirm
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={isUpdating}
-        onClick={onDeny}
-        className="h-8 rounded-lg border-red-200 px-3 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
-      >
-        Denied
-      </Button>
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="icon-sm"
+            disabled={isUpdating}
+            onClick={onConfirm}
+            className="size-8 rounded-lg bg-zinc-900 text-white hover:bg-zinc-700"
+            aria-label="Confirm"
+          >
+            <CheckIcon className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent sideOffset={6}>Confirm</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            disabled={isUpdating}
+            onClick={onDeny}
+            className="size-8 rounded-lg border-zinc-200 text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+            aria-label="Reject"
+          >
+            <Trash2Icon className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent sideOffset={6}>Reject</TooltipContent>
+      </Tooltip>
     </div>
   )
 }
@@ -173,19 +173,19 @@ const DoctorAppointments = () => {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex h-12 items-center gap-2 border-b border-slate-100 px-4">
+      <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4">
         <SidebarTrigger />
-        <span className="text-sm font-medium text-slate-700">
+        <span className="text-sm font-medium text-zinc-700">
           My Appointments
         </span>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
         <div>
-          <h1 className="text-lg font-semibold text-slate-800">
+          <h1 className="text-lg font-semibold text-zinc-900">
             Patient appointments
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-zinc-500">
             Review bookings and confirm or deny requests.
           </p>
         </div>
@@ -213,27 +213,27 @@ const DoctorAppointments = () => {
           </section>
 
           <section className="w-full min-w-0 lg:w-2/3">
-            <Card className="w-full gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+            <Card className="w-full gap-0 overflow-hidden rounded-lg border-zinc-200 bg-white py-0 shadow-sm">
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-100 hover:bg-transparent">
-                      <TableHead className="h-11 px-4 text-slate-600">
+                    <TableRow className="border-zinc-200 bg-zinc-100 hover:bg-zinc-100">
+                      <TableHead className="h-10 px-4 font-medium text-zinc-900">
                         Patient
                       </TableHead>
-                      <TableHead className="h-11 px-4 text-slate-600">
+                      <TableHead className="h-10 px-4 font-medium text-zinc-900">
                         Date
                       </TableHead>
-                      <TableHead className="h-11 px-4 text-slate-600">
+                      <TableHead className="h-10 px-4 font-medium text-zinc-900">
                         Start time
                       </TableHead>
-                      <TableHead className="h-11 px-4 text-slate-600">
+                      <TableHead className="h-10 px-4 font-medium text-zinc-900">
                         Room Link
                       </TableHead>
-                      <TableHead className="h-11 px-4 text-slate-600">
+                      <TableHead className="h-10 px-4 font-medium text-zinc-900">
                         Status
                       </TableHead>
-                      <TableHead className="h-11 px-4 text-slate-600">
+                      <TableHead className="h-10 px-4 font-medium text-zinc-900">
                         Action
                       </TableHead>
                     </TableRow>
@@ -249,17 +249,17 @@ const DoctorAppointments = () => {
                         return (
                           <TableRow
                             key={appointment.id}
-                            className="border-slate-100"
+                            className="border-zinc-200"
                           >
-                            <TableCell className="px-4 py-3 font-medium text-slate-800">
+                            <TableCell className="px-4 py-3 font-medium text-zinc-900">
                               {appointment.patientName}
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-slate-600">
+                            <TableCell className="px-4 py-3 text-zinc-600">
                               {formatAppointmentDate(
                                 appointment.appointmentDate,
                               )}
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-slate-600">
+                            <TableCell className="px-4 py-3 text-zinc-600">
                               {formatTime24ToDisplay(appointment.startTime)}
                             </TableCell>
                             <TableCell className="px-4 py-3">
@@ -269,7 +269,7 @@ const DoctorAppointments = () => {
                               />
                             </TableCell>
                             <TableCell className="px-4 py-3">
-                              <StatusBadge status={appointment.status} />
+                              <AppointmentStatusBadge status={appointment.status} />
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <AppointmentActions
@@ -294,7 +294,7 @@ const DoctorAppointments = () => {
                       <TableRow className="hover:bg-transparent">
                         <TableCell
                           colSpan={6}
-                          className="px-4 py-10 text-center text-sm text-slate-500"
+                          className="px-4 py-10 text-center text-sm text-zinc-500"
                         >
                           No appointments.
                         </TableCell>

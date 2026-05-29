@@ -40,32 +40,26 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-white px-4 py-6 text-slate-900">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 left-1/2 h-72 w-xl -translate-x-1/2 rounded-full bg-sky-100/60 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl" />
-      </div>
-
+    <div className="flex min-h-dvh items-center justify-center bg-zinc-50 px-4 py-6 text-zinc-900">
       <div className="mx-auto w-full max-w-md">
         <Link
           to="/"
-          className="relative mb-6 inline-flex items-center gap-2 rounded-full px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          className="mb-6 inline-flex items-center gap-2 rounded-full px-3 text-sm font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
         >
           ← Back to home
         </Link>
 
-        <Card className="relative gap-0 border-slate-200/70 bg-white/70 py-0 shadow-[0_20px_60px_-32px_rgba(2,132,199,0.35)] backdrop-blur-sm">
+        <Card className="gap-0 border-zinc-200 bg-white py-0 shadow-sm">
           <CardHeader className="gap-2 px-8 pt-10 pb-6 text-center">
-            <CardTitle className="text-3xl font-semibold tracking-tight text-slate-900">
-              Welcome Back<span className="text-sky-600">!</span>
+            <CardTitle className="text-3xl font-semibold tracking-tight text-zinc-900">
+              Welcome Back
             </CardTitle>
-            <CardDescription className="text-slate-500">
+            <CardDescription className="text-zinc-500">
               Sign in to continue your care.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col px-8 pb-10">
-
             <form className="flex flex-1 flex-col" onSubmit={handleLogin}>
               <FieldGroup className="flex flex-1 flex-col gap-8">
                 <Field className="gap-3">
@@ -76,7 +70,7 @@ export default function Login() {
                     placeholder="Your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                    className="h-12 rounded-full border-zinc-200 bg-zinc-50 px-5 text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
                     required
                     disabled={isLoading}
                   />
@@ -87,7 +81,7 @@ export default function Login() {
                     <FieldLabel htmlFor="password">Password</FieldLabel>
                     <a
                       href="#"
-                      className="ml-auto inline-block text-sm font-medium text-sky-600 underline-offset-4 hover:text-sky-700 hover:underline"
+                      className="ml-auto inline-block text-sm font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline"
                     >
                       Forgot your password?
                     </a>
@@ -98,7 +92,7 @@ export default function Login() {
                     placeholder="Your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 rounded-full border-sky-100 bg-sky-50/60 px-5 text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+                    className="h-12 rounded-full border-zinc-200 bg-zinc-50 px-5 text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
                     required
                     disabled={isLoading}
                   />
@@ -107,7 +101,7 @@ export default function Login() {
                 <Field className="mt-auto gap-4">
                   <Button
                     type="submit"
-                    className="h-12 w-full rounded-full bg-sky-600 text-white shadow-sm hover:bg-sky-700 focus-visible:ring-sky-200/70 disabled:opacity-60"
+                    className="h-12 w-full rounded-full bg-zinc-900 text-white shadow-sm hover:bg-zinc-700 focus-visible:ring-zinc-400/70 disabled:opacity-60"
                     disabled={isLoading}
                   >
                     {isLoading ? "Signing in…" : "Sign in"}
@@ -115,16 +109,16 @@ export default function Login() {
                   <Button
                     variant="outline"
                     type="button"
-                    className="h-12 w-full rounded-full border-slate-200 bg-white/60 hover:bg-slate-50"
+                    className="h-12 w-full rounded-full border-zinc-200 bg-white hover:bg-zinc-50 hover:text-zinc-900"
                     disabled={isLoading}
                   >
                     Sign in with Google
                   </Button>
-                  <FieldDescription className="text-center">
+                  <FieldDescription className="text-center text-zinc-500">
                     Don&apos;t have an account?{" "}
                     <Link
                       to="/register"
-                      className="font-medium text-sky-600 hover:text-sky-700 hover:underline"
+                      className="font-medium text-zinc-900 underline-offset-4 hover:underline"
                     >
                       Sign up
                     </Link>

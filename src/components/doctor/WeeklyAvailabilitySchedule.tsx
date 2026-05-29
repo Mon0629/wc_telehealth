@@ -20,7 +20,7 @@ const DEFAULT_START = "09:00"
 const DEFAULT_END = "17:00"
 
 const timeInputClassName =
-  "h-7 min-w-0 flex-1 w-full rounded-md border-slate-200 bg-white px-1.5 text-xs text-slate-900 [color-scheme:light] focus-visible:border-sky-300 focus-visible:ring-sky-200/60 [&::-webkit-calendar-picker-indicator]:size-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+  "h-7 min-w-0 flex-1 w-full rounded-md border-zinc-200 bg-white px-1.5 text-xs text-zinc-900 [color-scheme:light] focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60 [&::-webkit-calendar-picker-indicator]:size-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
 
 export interface DayScheduleRow {
   enabled: boolean
@@ -129,17 +129,17 @@ export function WeeklyAvailabilitySchedule() {
   }
 
   return (
-    <Card className="gap-0 overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
-      <CardHeader className="border-b border-slate-100 px-3 py-2.5">
+    <Card className="gap-0 overflow-hidden border-zinc-200 bg-white py-0 shadow-sm">
+      <CardHeader className="border-b border-zinc-200 px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-md bg-sky-100">
-            <CalendarClockIcon className="size-3.5 text-sky-600" />
+          <div className="flex size-7 items-center justify-center rounded-md bg-zinc-100">
+            <CalendarClockIcon className="size-3.5 text-zinc-600" />
           </div>
           <div className="min-w-0">
-            <CardTitle className="text-sm font-semibold text-slate-800">
+            <CardTitle className="text-sm font-semibold text-zinc-900">
               Weekly availability
             </CardTitle>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-zinc-500">
               Check a day, then set hours.
             </p>
           </div>
@@ -154,7 +154,7 @@ export function WeeklyAvailabilitySchedule() {
             ))}
           </div>
         ) : (
-        <ul className="flex flex-col divide-y divide-slate-100">
+        <ul className="flex flex-col divide-y divide-zinc-200">
           {DAYS_OF_WEEK.map(({ value, label }) => {
             const row = schedule[value]
             const startId = `availability-start-${value}`
@@ -166,7 +166,7 @@ export function WeeklyAvailabilitySchedule() {
                 key={value}
                 className={cn(
                   "flex min-w-0 items-center gap-2 py-1.5 first:pt-0 last:pb-0",
-                  row.enabled && "bg-sky-50/30 -mx-1 rounded-md px-1",
+                  row.enabled && "bg-zinc-50 -mx-1 rounded-md px-1",
                 )}
               >
                 <Checkbox
@@ -180,7 +180,7 @@ export function WeeklyAvailabilitySchedule() {
                 />
                 <Label
                   htmlFor={checkboxId}
-                  className="w-24 shrink-0 cursor-pointer text-xs font-medium text-slate-800"
+                  className="w-24 shrink-0 cursor-pointer text-xs font-medium text-zinc-900"
                 >
                   {label}
                 </Label>
@@ -220,7 +220,7 @@ export function WeeklyAvailabilitySchedule() {
           onClick={() => {
             handleSave().catch(() => undefined)
           }}
-          className="h-8 w-full rounded-lg bg-sky-600 text-xs font-medium text-white hover:bg-sky-700"
+          className="h-8 w-full rounded-lg bg-zinc-900 text-xs font-medium text-white hover:bg-zinc-700"
         >
           {isSaving ? "Saving…" : "Save availability"}
         </Button>

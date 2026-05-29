@@ -35,12 +35,12 @@ function RxLogo({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-emerald-600 bg-emerald-50",
+        "flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-zinc-300 bg-zinc-100",
         className,
       )}
       aria-hidden
     >
-      <span className="font-serif text-xl font-bold leading-none text-emerald-700">
+      <span className="font-serif text-xl font-bold leading-none text-zinc-800">
         ℞
       </span>
     </div>
@@ -67,12 +67,12 @@ function MedicineCard({
   onRemove,
 }: MedicineCardProps) {
   const inputClassName =
-    "h-9 rounded-lg border-slate-200 bg-white text-sm focus-visible:border-sky-300 focus-visible:ring-sky-200/60"
+    "h-9 rounded-lg border-zinc-200 bg-white text-sm focus-visible:border-zinc-400 focus-visible:ring-zinc-300/60"
 
   return (
-    <Card className="shrink-0 gap-0 border-slate-200 bg-slate-50/50 py-0 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-slate-100 px-3 py-2.5">
-        <CardTitle className="text-sm font-semibold text-slate-800">
+    <Card className="shrink-0 gap-0 border-zinc-200 bg-zinc-50 py-0 shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-zinc-200 px-3 py-2.5">
+        <CardTitle className="text-sm font-semibold text-zinc-900">
           Medicine {index + 1}
         </CardTitle>
         {canRemove ? (
@@ -81,7 +81,7 @@ function MedicineCard({
             variant="ghost"
             size="icon-sm"
             onClick={() => onRemove(item.id)}
-            className="size-8 text-slate-400 hover:bg-red-50 hover:text-red-600"
+            className="size-8 text-zinc-400 hover:bg-red-50 hover:text-red-600"
             aria-label={`Remove medicine ${index + 1}`}
           >
             <Trash2Icon className="size-4" />
@@ -92,7 +92,7 @@ function MedicineCard({
         <div className="flex flex-col gap-1.5">
           <Label
             htmlFor={`${item.id}-medicine_name`}
-            className="text-xs font-medium text-slate-600"
+            className="text-xs font-medium text-zinc-600"
           >
             Medicine name
           </Label>
@@ -109,7 +109,7 @@ function MedicineCard({
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label
               htmlFor={`${item.id}-dosage`}
-              className="text-xs font-medium text-slate-600"
+              className="text-xs font-medium text-zinc-600"
             >
               Dosage (mg)
             </Label>
@@ -129,7 +129,7 @@ function MedicineCard({
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label
               htmlFor={`${item.id}-frequency`}
-              className="text-xs font-medium text-slate-600"
+              className="text-xs font-medium text-zinc-600"
             >
               Frequency (/day)
             </Label>
@@ -149,7 +149,7 @@ function MedicineCard({
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label
               htmlFor={`${item.id}-duration`}
-              className="text-xs font-medium text-slate-600"
+              className="text-xs font-medium text-zinc-600"
             >
               Duration (days)
             </Label>
@@ -171,7 +171,7 @@ function MedicineCard({
         <div className="flex flex-col gap-1.5">
           <Label
             htmlFor={`${item.id}-instructions`}
-            className="text-xs font-medium text-slate-600"
+            className="text-xs font-medium text-zinc-600"
           >
             Notes
           </Label>
@@ -182,7 +182,7 @@ function MedicineCard({
               onUpdate(item.id, "instructions", e.target.value)
             }
             placeholder="e.g. Take after meals"
-            className="min-h-14 resize-none rounded-lg border-slate-200 bg-white text-sm"
+            className="min-h-14 resize-none rounded-lg border-zinc-200 bg-white text-sm"
           />
         </div>
       </CardContent>
@@ -274,14 +274,14 @@ export function PrescriptionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        overlayClassName="bg-slate-900/20 backdrop-blur-none"
+        overlayClassName="bg-zinc-900/20 backdrop-blur-none"
         className={cn(
           "fixed top-1/2 left-1/2 flex w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden p-0",
           "max-h-[min(90dvh,680px)] sm:max-w-md",
         )}
         showCloseButton
       >
-        <DialogHeader className="shrink-0 border-b border-slate-100 px-4 py-4">
+        <DialogHeader className="shrink-0 border-b border-zinc-200 px-4 py-4">
           <div className="flex items-start gap-3 pr-8">
             <RxLogo />
             <div className="min-w-0 flex-1">
@@ -313,7 +313,7 @@ export function PrescriptionDialog({
               type="button"
               variant="outline"
               onClick={addItem}
-              className="h-9 shrink-0 rounded-xl border-dashed border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="h-9 shrink-0 rounded-xl border-dashed border-zinc-300 bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
               <PlusIcon className="size-4" />
               Add another prescription
@@ -321,7 +321,7 @@ export function PrescriptionDialog({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t border-slate-100 px-4 py-3 sm:gap-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-zinc-200 px-4 py-3 sm:gap-2">
           <Button
             type="button"
             variant="outline"
@@ -337,7 +337,7 @@ export function PrescriptionDialog({
             onClick={() => {
               handleSubmit().catch(() => undefined)
             }}
-            className="h-9 rounded-xl bg-emerald-600 text-sm text-white hover:bg-emerald-700"
+            className="h-9 rounded-xl bg-zinc-900 text-sm text-white hover:bg-zinc-700"
           >
             {isSubmitting ? "Saving…" : "Save prescription"}
           </Button>

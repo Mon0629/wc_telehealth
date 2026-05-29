@@ -17,10 +17,19 @@ import {
   VideoIcon,
 } from "lucide-react"
 
+import { AppointmentStatusBadge } from "@/components/appointments/AppointmentStatusBadge"
 import { RecentNotificationsCard } from "@/components/notifications/RecentNotificationsCard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { waitForAuthHydration } from "@/lib/auth-hydration"
@@ -28,29 +37,9 @@ import useAuthStore from "@/store/authStore"
 import useAppointmentStore, {
   APPOINTMENTS_LIST_MAX_LIMIT,
   formatTime24ToDisplay,
-  type DoctorAppointmentStatus,
   type PatientAppointmentItem,
 } from "@/store/appointmentStore"
 import stethoscopeImage from "@/assets/sthetoscope.png"
-
-function StatusBadge({ status }: { status: DoctorAppointmentStatus }) {
-  const normalized = status.toLowerCase()
-
-  return (
-    <span
-      className={cn(
-        "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
-        normalized === "confirmed" && "bg-blue-600 text-white",
-        normalized === "pending" && "bg-blue-400/80 text-white",
-        normalized === "denied" && "bg-red-100 text-red-700",
-        normalized === "completed" && "bg-sky-100 text-sky-700",
-        normalized === "cancelled" && "bg-slate-100 text-slate-600",
-      )}
-    >
-      {normalized}
-    </span>
-  )
-}
 
 function StethoscopeIllustration() {
   return (
@@ -77,7 +66,7 @@ function AppointmentJoinLink({
   return (
     <Link
       to={`/call/${appointmentId}`}
-      className="shrink-0 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700"
+      className="shrink-0 text-sm font-medium text-zinc-900 underline-offset-4 hover:underline"
     >
       Join
     </Link>
@@ -94,38 +83,40 @@ function formatAppointmentDayLabel(date: string) {
   }
 }
 
-function UpcomingAppointmentCard({ appointment }: { appointment: PatientAppointmentItem }) {
+function UpcomingAppointmentRow({
+  appointment,
+}: {
+  appointment: PatientAppointmentItem
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h3 className="truncate text-sm font-semibold text-slate-900">
-            {appointment.doctorName}
-          </h3>
-          <StatusBadge status={appointment.status} />
-        </div>
+    <TableRow className="border-zinc-200">
+      <TableCell className="px-4 py-3">
+        <div className="font-medium text-zinc-900">{appointment.doctorName}</div>
+        <p className="mt-0.5 text-xs text-zinc-500">Your scheduled consultation</p>
+      </TableCell>
+      <TableCell className="px-4 py-3 text-zinc-600">
+        {formatAppointmentDayLabel(appointment.appointmentDate)}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-zinc-600">
+        <span className="inline-flex items-center gap-1.5">
+          <ClockIcon className="size-3.5 text-zinc-400" />
+          {formatTime24ToDisplay(appointment.startTime)} (30 min)
+        </span>
+        <span className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+          <VideoIcon className="size-3.5 text-zinc-400" />
+          Video Call
+        </span>
+      </TableCell>
+      <TableCell className="px-4 py-3">
+        <AppointmentStatusBadge status={appointment.status} />
+      </TableCell>
+      <TableCell className="px-4 py-3 text-right">
         <AppointmentJoinLink
           appointmentId={appointment.id}
           canJoin={appointment.status === "Confirmed"}
         />
-      </div>
-
-      <p className="mt-1.5 text-sm text-slate-500">Your scheduled consultation</p>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-        <span className="inline-flex items-center gap-1.5 font-medium text-slate-600">
-          {formatAppointmentDayLabel(appointment.appointmentDate)}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <ClockIcon className="size-3.5 text-slate-400" />
-          {formatTime24ToDisplay(appointment.startTime)} (30 min)
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <VideoIcon className="size-3.5 text-slate-400" />
-          Video Call
-        </span>
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -142,9 +133,9 @@ function TodayDateStripCard({
   const dayOptions = [addDays(today, -1), today, addDays(today, 1)]
 
   return (
-    <Card className="flex h-full w-full flex-col gap-0 border-0 bg-white py-0 shadow-sm ring-1 ring-slate-100">
+    <Card className="flex h-full w-full flex-col gap-0 border-zinc-200 bg-white py-0 shadow-sm">
       <CardContent className="flex h-full flex-col justify-center p-4 sm:p-5">
-        <p className="mb-4 text-base font-bold text-slate-900">
+        <p className="mb-4 text-base font-bold text-zinc-900">
           Today, {format(today, "d MMMM")}
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -160,9 +151,9 @@ function TodayDateStripCard({
                 className={cn(
                   "flex flex-col items-center rounded-xl border px-2 py-2.5 text-center transition-colors",
                   isSelected
-                    ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
-                  !isSelected && hasAppointment && "border-blue-300",
+                    ? "border-zinc-900 bg-zinc-900 text-white shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300",
+                  !isSelected && hasAppointment && "border-zinc-400",
                 )}
               >
                 <span className="text-lg font-semibold leading-none">
@@ -171,7 +162,7 @@ function TodayDateStripCard({
                 <span
                   className={cn(
                     "mt-1 text-xs font-medium",
-                    isSelected ? "text-blue-100" : "text-slate-500",
+                    isSelected ? "text-zinc-300" : "text-zinc-500",
                   )}
                 >
                   {format(day, "EEE")}
@@ -185,13 +176,17 @@ function TodayDateStripCard({
   )
 }
 
-function UpcomingAppointmentsSkeleton() {
+function UpcomingAppointmentsTableSkeleton() {
   return (
-    <div className="space-y-3">
+    <>
       {Array.from({ length: 3 }).map((_, i) => (
-        <Skeleton key={i} className="h-[108px] w-full rounded-xl" />
+        <TableRow key={i} className="border-zinc-200">
+          <TableCell className="px-4 py-3" colSpan={5}>
+            <Skeleton className="h-10 w-full" />
+          </TableCell>
+        </TableRow>
       ))}
-    </div>
+    </>
   )
 }
 
@@ -274,21 +269,21 @@ export default function PatientDashboard() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex h-12 items-center gap-2 border-b border-slate-100 px-4">
+      <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4">
         <SidebarTrigger />
-        <span className="text-sm font-medium text-slate-700">Dashboard</span>
+        <span className="text-sm font-medium text-zinc-700">Dashboard</span>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden p-5">
         <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-stretch">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 lg:w-3/4">
             <div className="flex shrink-0 flex-col gap-5 overflow-visible lg:flex-row lg:items-stretch">
-              <Card className="relative flex h-full w-full min-w-0 flex-2 gap-0 overflow-visible border-0 bg-linear-to-br from-blue-600 via-blue-500 to-blue-700 py-0 shadow-lg ring-0">
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.12),transparent_60%)]" />
+              <Card className="relative flex h-full w-full min-w-0 flex-2 gap-0 overflow-visible border-0 bg-zinc-900 py-0 shadow-lg ring-0">
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.08),transparent_60%)]" />
                 <CardContent className="relative overflow-visible p-4 pr-20 sm:p-5 sm:pr-24 lg:pr-28">
                   <div className="relative z-10 flex min-w-0 flex-col gap-3">
                     <div className="space-y-1">
-                      <p className="text-xs font-medium text-blue-100 sm:text-sm">
+                      <p className="text-xs font-medium text-zinc-400 sm:text-sm">
                         Welcome back, {user?.firstName ?? displayName}
                       </p>
                       <h2 className="text-xl font-bold leading-tight tracking-tight text-white sm:text-2xl">
@@ -297,7 +292,7 @@ export default function PatientDashboard() {
                     </div>
                     <Button
                       size="default"
-                      className="w-fit rounded-full bg-white px-5 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50"
+                      className="w-fit rounded-full bg-white px-5 text-sm font-semibold text-zinc-900 shadow-sm hover:bg-zinc-100"
                       onClick={() => navigate("/patient/appointments")}
                     >
                       <CalendarCheckIcon className="size-4" />
@@ -323,38 +318,80 @@ export default function PatientDashboard() {
 
             <section className="flex min-h-0 flex-1 flex-col">
               <div className="mb-4 flex shrink-0 items-center justify-between">
-                <h2 className="text-base font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-zinc-900">
                   Upcoming Appointments
                 </h2>
                 {!isLoading && upcomingAppointments.length > 0 ? (
-                  <span className="text-sm font-medium text-slate-500">
+                  <span className="text-sm font-medium text-zinc-500">
                     {upcomingAppointments.length} scheduled
                   </span>
                 ) : null}
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
                 {isLoading ? (
-                  <div className="p-4">
-                    <UpcomingAppointmentsSkeleton />
-                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-zinc-200 bg-zinc-100 hover:bg-zinc-100">
+                        <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                          Doctor
+                        </TableHead>
+                        <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                          Date
+                        </TableHead>
+                        <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                          Time
+                        </TableHead>
+                        <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                          Status
+                        </TableHead>
+                        <TableHead className="h-10 px-4 text-right font-medium text-zinc-900">
+                          Action
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <UpcomingAppointmentsTableSkeleton />
+                    </TableBody>
+                  </Table>
                 ) : upcomingAppointments.length > 0 ? (
                   <>
-                    <div className="flex-1 overflow-y-auto p-4">
-                      <div className="space-y-3">
-                        {upcomingAppointments.slice(0, 3).map((appointment) => (
-                          <UpcomingAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                          />
-                        ))}
-                      </div>
+                    <div className="flex-1 overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-zinc-200 bg-zinc-100 hover:bg-zinc-100">
+                            <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                              Doctor
+                            </TableHead>
+                            <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                              Date
+                            </TableHead>
+                            <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                              Time
+                            </TableHead>
+                            <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                              Status
+                            </TableHead>
+                            <TableHead className="h-10 px-4 text-right font-medium text-zinc-900">
+                              Action
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {upcomingAppointments.slice(0, 3).map((appointment) => (
+                            <UpcomingAppointmentRow
+                              key={appointment.id}
+                              appointment={appointment}
+                            />
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
-                    <div className="shrink-0 border-t border-slate-100 p-3 text-center">
+                    <div className="shrink-0 border-t border-zinc-200 p-3 text-center">
                       <button
                         type="button"
                         onClick={() => navigate("/patient/appointments")}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-zinc-900 transition-colors hover:underline"
                       >
                         See all appointments
                         <ChevronRightIcon className="size-4" />
@@ -362,12 +399,12 @@ export default function PatientDashboard() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl p-8 text-center">
-                    <CalendarClockIcon className="mb-3 size-10 text-slate-300" />
-                    <p className="text-sm font-medium text-slate-700">
+                  <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+                    <CalendarClockIcon className="mb-3 size-10 text-zinc-300" />
+                    <p className="text-sm font-medium text-zinc-700">
                       No upcoming appointments
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-zinc-500">
                       Book an appointment to see your consultations here.
                     </p>
                   </div>
