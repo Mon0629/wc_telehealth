@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import teleconference from "@/assets/teleconference.jpg";
+import logo from "@/assets/konsultify-logo.png";
 import { Button } from "@/components/ui/button";
 import {
   Video,
@@ -25,9 +26,11 @@ export default function LandingPage() {
             to="/"
             className="inline-flex items-center gap-2.5 text-lg font-bold tracking-tight text-zinc-900"
           >
-            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white">
-              K
-            </span>
+            <img
+              src={logo}
+              alt="Konsultify"
+              className="size-8 shrink-0 rounded-lg object-contain"
+            />
             Konsultify
           </Link>
 
@@ -417,9 +420,11 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-2.5 text-lg font-bold text-zinc-900">
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-bold text-white">
-                K
-              </span>
+              <img
+                src={logo}
+                alt="Konsultify"
+                className="size-8 shrink-0 rounded-lg object-contain"
+              />
               Konsultify
             </div>
             <div className="flex items-center gap-6 text-sm text-zinc-500">

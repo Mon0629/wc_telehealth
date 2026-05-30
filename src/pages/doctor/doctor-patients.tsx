@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 import { format, parseISO } from "date-fns"
 import {
   ChevronLeftIcon,
@@ -263,6 +270,8 @@ function ConsultationNotesDetailPanel({
   const [notes, setNotes] = useState<ConsultationNotesForm | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const onSummaryChangeRef = useRef(onSummaryChange)
+  onSummaryChangeRef.current = onSummaryChange
 
   useEffect(() => {
     let cancelled = false
@@ -282,11 +291,11 @@ function ConsultationNotesDetailPanel({
         if (cancelled) return
         const resolved = fetched ?? stored
         setNotes(resolved)
-        onSummaryChange?.(resolved)
+        onSummaryChangeRef.current?.(resolved)
       } catch {
         if (cancelled) return
         setNotes(stored)
-        onSummaryChange?.(stored)
+        onSummaryChangeRef.current?.(stored)
         setError("Could not load consultation notes from the server.")
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -298,7 +307,7 @@ function ConsultationNotesDetailPanel({
     return () => {
       cancelled = true
     }
-  }, [selection.appointmentId, onSummaryChange])
+  }, [selection.appointmentId])
 
   const fields: Array<{ key: keyof ConsultationNotesForm; label: string }> = [
     { key: "chief_complaint", label: "Chief complaint" },
@@ -360,6 +369,8 @@ function PrescriptionDetailPanel({
   const [items, setItems] = useState<PrescriptionItem[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const onSummaryChangeRef = useRef(onSummaryChange)
+  onSummaryChangeRef.current = onSummaryChange
 
   useEffect(() => {
     let cancelled = false
@@ -377,13 +388,13 @@ function PrescriptionDetailPanel({
         if (cancelled) return
         const resolved = fetched ?? stored
         setItems(resolved)
-        onSummaryChange?.(
+        onSummaryChangeRef.current?.(
           hasPrescription(resolved) ? resolved : null,
         )
       } catch {
         if (cancelled) return
         setItems(stored)
-        onSummaryChange?.(
+        onSummaryChangeRef.current?.(
           hasPrescription(stored) ? stored : null,
         )
         setError("Could not load prescription from the server.")
@@ -397,7 +408,7 @@ function PrescriptionDetailPanel({
     return () => {
       cancelled = true
     }
-  }, [selection.appointmentId, onSummaryChange])
+  }, [selection.appointmentId])
 
   return (
     <DetailPanelShell
