@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import {
-  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   MessageCircleIcon,
   SearchIcon,
-  SlidersHorizontalIcon,
   SparklesIcon,
   StethoscopeIcon,
   TagIcon,
@@ -606,14 +604,6 @@ const PatientDoctorDiscovery = () => {
               >
                 <WandSparklesIcon className="size-4" />
                 AI Suggest
-              </Button>
-              <Button
-                variant="outline"
-                className="h-9 shrink-0 gap-1.5 rounded-xl border-zinc-200 px-3 text-sm text-zinc-600"
-              >
-                <SlidersHorizontalIcon className="size-4" />
-                Filter
-                <ChevronDownIcon className="size-3.5 opacity-60" />
               </Button>
             </div>
           </div>
