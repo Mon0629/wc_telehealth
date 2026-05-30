@@ -93,27 +93,27 @@ function UpcomingAppointmentRow({
 
   return (
     <TableRow className="border-zinc-200">
-      <TableCell className="px-4 py-3">
+      <TableCell className="max-w-0 px-4 py-3 align-top whitespace-normal break-words">
         <div className="font-medium text-zinc-900">{appointment.patientName}</div>
         <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>
       </TableCell>
-      <TableCell className="px-4 py-3 text-zinc-600">
+      <TableCell className="px-4 py-3 align-top text-zinc-600">
         {formatAppointmentDayLabel(appointment.appointmentDate)}
       </TableCell>
-      <TableCell className="px-4 py-3 text-zinc-600">
+      <TableCell className="px-4 py-3 align-top text-zinc-600">
         <span className="inline-flex items-center gap-1.5">
-          <ClockIcon className="size-3.5 text-zinc-400" />
+          <ClockIcon className="size-3.5 shrink-0 text-zinc-400" />
           {formatTime24ToDisplay(appointment.startTime)} (30 min)
         </span>
         <span className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-          <VideoIcon className="size-3.5 text-zinc-400" />
+          <VideoIcon className="size-3.5 shrink-0 text-zinc-400" />
           Video Call
         </span>
       </TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell className="px-4 py-3 align-top">
         <AppointmentStatusBadge status={appointment.status} />
       </TableCell>
-      <TableCell className="px-4 py-3 text-right">
+      <TableCell className="px-4 py-3 align-top text-right">
         <AppointmentJoinLink
           appointmentId={appointment.id}
           canJoin={appointment.status === "Confirmed"}
@@ -330,10 +330,10 @@ export default function DoctorDashboard() {
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
             {isLoading ? (
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="border-zinc-200 bg-zinc-100 hover:bg-zinc-100">
-                    <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                    <TableHead className="h-10 w-[40%] px-4 font-medium text-zinc-900">
                       Patient
                     </TableHead>
                     <TableHead className="h-10 px-4 font-medium text-zinc-900">
@@ -356,11 +356,11 @@ export default function DoctorDashboard() {
               </Table>
             ) : upcomingAppointments.length > 0 ? (
               <>
-                <div className="flex-1 overflow-y-auto">
-                  <Table>
+                <div className="flex-1 overflow-x-hidden overflow-y-auto [&_[data-slot=table-container]]:overflow-x-hidden">
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow className="border-zinc-200 bg-zinc-100 hover:bg-zinc-100">
-                        <TableHead className="h-10 px-4 font-medium text-zinc-900">
+                        <TableHead className="h-10 w-[40%] px-4 font-medium text-zinc-900">
                           Patient
                         </TableHead>
                         <TableHead className="h-10 px-4 font-medium text-zinc-900">
