@@ -25,7 +25,7 @@ import usePatientProfileStore from "@/store/patientProfileStore"
 import useDoctorProfileStore from "@/store/doctorProfileStore"
 import { PatientProfileModal } from "@/pages/patient/patient-profile"
 import { DoctorProfileModal } from "@/pages/doctor/doctor-profile"
-import logo from "@/assets/vite.svg"
+import logo from "@/assets/konsultify-logo.png"
 
 const patientNav = [
   {
@@ -102,9 +102,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="/" className="flex items-center gap-2">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <img src={logo} alt="Konsultify" className="size-5" />
-                </div>
+                <img
+                  src={logo}
+                  alt="Konsultify"
+                  className="size-8 shrink-0 rounded-lg object-contain"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Konsultify</span>
                   <span className="truncate text-xs text-muted-foreground">
